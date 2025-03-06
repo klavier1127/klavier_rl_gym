@@ -112,7 +112,7 @@ class g1Cfg(LeggedRobotCfg):
         rd_mass_range = [0.5, 1.5]
         randomize_all_com = False
         rd_com_range = [-0.03, 0.03]
-        randomize_base_com = True
+        randomize_base_com = False
         added_com_range = [-0.10, 0.10]
         randomize_Kp_factor = False
         Kp_factor_range = [0.8, 1.2]
@@ -127,7 +127,7 @@ class g1Cfg(LeggedRobotCfg):
         randomize_joint_damping = False
         joint_damping_range = [0.3, 1.5]
         randomize_joint_armature = True
-        joint_armature_range = [0.008, 0.03]
+        joint_armature_range = [0.01, 0.05]
 
 
     class commands(LeggedRobotCfg.commands):
@@ -155,7 +155,7 @@ class g1Cfg(LeggedRobotCfg):
         only_positive_rewards = False
         # tracking reward = exp(error*sigma)
         tracking_sigma = 0.5
-        max_contact_force = 300     # Forces above this value are penalized
+        max_contact_force = 400     # Forces above this value are penalized
 
         class scales:
             # feet pos
@@ -165,6 +165,7 @@ class g1Cfg(LeggedRobotCfg):
             feet_air_time = -3.0
             feet_height = -5.0
             contact_no_vel = -0.3
+            contact_forces = -0.01
 
             # vel tracking
             tracking_lin_vel = 2.0
@@ -204,14 +205,9 @@ class g1CfgPPO(LeggedRobotCfgPPO):
     runner_class_name = 'PIAOnPolicyRunner'
 
     class policy:
-        # # only for 'OnPolicyRunner' and 'SymOnPolicyRunner':
+        # # only for 'OnPolicyRunner', 'OnPolicyRunner' and 'SymOnPolicyRunner':
         # actor_hidden_dims = [512, 256, 128]
         # critic_hidden_dims = [768, 256, 128]
-
-        # # only for 'EstOnPolicyRunner':
-        # actor_hidden_dims = [512, 256, 128]
-        # critic_hidden_dims = [768, 256, 128]
-        # state_estimator_dims = [256, 128, 64]
 
         # only for 'RNNOnPolicyRunner', 'DWLOnPolicyRunner' and 'PIAOnPolicyRunner':
         actor_hidden_dims = [32]

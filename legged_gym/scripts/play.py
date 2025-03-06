@@ -87,7 +87,7 @@ def play(args):
         actions = policy(obs.detach(), privileged_obs.detach(), obs_history.detach())  # * 0.
 
         if FIX_COMMAND:
-            env.commands[:, 0] = 1.0  # 1.0
+            env.commands[:, 0] = 0.0  # 1.0
             env.commands[:, 1] = 0.0
             env.commands[:, 2] = 0.
             env.commands[:, 3] = 0.

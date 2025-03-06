@@ -48,5 +48,7 @@ setup(
                       'opencv-python',
                       'mujoco==3.1.5',
                       'mujoco-python-viewer',
-                      'matplotlib']
+                      'matplotlib',
+                      'pybullet',
+                      'pynput']
 )

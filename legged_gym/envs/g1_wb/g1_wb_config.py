@@ -146,7 +146,7 @@ class g1WBCfg(LeggedRobotCfg):
         randomize_joint_damping = False
         joint_damping_range = [0.3, 1.5]
         randomize_joint_armature = True
-        joint_armature_range = [0.008, 0.03]
+        joint_armature_range = [0.01, 0.05]
 
 
     class commands(LeggedRobotCfg.commands):

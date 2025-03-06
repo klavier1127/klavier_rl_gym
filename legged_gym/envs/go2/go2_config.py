@@ -117,7 +117,7 @@ class go2Cfg(LeggedRobotCfg):
         randomize_joint_damping = False
         joint_damping_range = [0.3, 1.5]
         randomize_joint_armature = False
-        joint_armature_range = [0.001, 0.03]
+        joint_armature_range = [0.01, 0.05]
 
 
     class commands(LeggedRobotCfg.commands):

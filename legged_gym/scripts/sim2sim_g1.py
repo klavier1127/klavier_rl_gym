@@ -4,7 +4,6 @@ import numpy as np
 import mujoco, mujoco_viewer
 from tqdm import tqdm
 from collections import deque
-from scipy.spatial.transform import Rotation as R
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs import g1Cfg
 import torch
@@ -36,37 +35,17 @@ def get_obs(data):
 def pd_control(default_dof_pos, target_q, q, kp, target_dq, dq, kd):
     return (target_q - q + default_dof_pos) * kp + (target_dq - dq) * kd
 
-vx, vy, dyaw = 0.0, 0.0, 0.0
+cmd = np.zeros(3, dtype=np.float32)
 def on_press(key):
-    global vx, vy, dyaw
     try:
-        if key.char == '2':  # 向前
-            vx += 0.1
-        elif key.char == '3':  # 向后
-            vx -= 0.1
-        elif key.char == '4':  # 向左
-            vy += 0.1
-        elif key.char == '5':  # 向右
-            vy -= 0.1
-        elif key.char == '6':  # 逆时针旋转
-            dyaw += 0.1
-        elif key.char == '7':  # 顺时针旋转
-            dyaw -= 0.1
-        elif key.char == '`':
-            vx = 0.0
-            vy = 0.0
-            dyaw = 0.0
-
-        # 限制速度范围
-        vx = np.clip(vx, -1.0, 1.5)
-        vy = np.clip(vy, -0.5, 0.5)
-        dyaw = np.clip(dyaw, -1.0, 1.0)
-    except AttributeError:
-        pass
-
-# 启动键盘监听器
-listener = keyboard.Listener(on_press=on_press)
-listener.start()
+        if key.char == '2': cmd[0] = 1.0    # 前进
+        if key.char == '3': cmd[0] = -1.0   # 后退
+        if key.char == '4': cmd[1] = 0.5    # 左移
+        if key.char == '5': cmd[1] = -0.5   # 右移
+        if key.char == '6': cmd[2] = 1.0    # 左转
+        if key.char == '7': cmd[2] = -1.0   # 右转
+    except: pass
+keyboard.Listener(on_press=on_press).start()
 
 def run_mujoco(policy, cfg):
     model = mujoco.MjModel.from_xml_path(cfg.sim_config.mujoco_model_path)
@@ -93,11 +72,8 @@ def run_mujoco(policy, cfg):
     for _ in tqdm(range(int(cfg.sim_config.sim_duration / cfg.sim_config.dt)), desc="Simulating..."):
         # Obtain an observation
         q, dq, omega, euler = get_obs(data)
-
         # 1000hz -> 100hz
         force = [0, 0, 0]
-        cmd = np.array([[vx, vy, dyaw]], dtype=np.float32)
-
         cycle_time = 0.8
         dt_phase = cfg.sim_config.dt / cycle_time
         phase = phase + dt_phase
