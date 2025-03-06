@@ -30,10 +30,10 @@ class ActorCritic(nn.Module):
         self.env_factor_num = env_factor_num
         self.env_features_num = env_features_num
 
-        self.autoencoder = Autoencoder(self.env_factor_num, self.env_features_num)
+        self.vae = VAE(self.env_factor_num, self.env_features_num)
         self.estimator = EstimatorNet(num_obs_history=num_obs_history)
         memory_input_a = num_actor_obs + self.env_features_num
-        memory_input_c = num_critic_obs + self.env_features_num
+        memory_input_c = num_critic_obs
         self.memory_a = Memory(memory_input_a, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.memory_c = Memory(memory_input_c, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.actor = Actor(rnn_hidden_size, num_actions, actor_hidden_dims)
@@ -74,12 +74,11 @@ class ActorCritic(nn.Module):
 
     def get_env_features(self, critic_obs):
         env_factors = critic_obs[..., -self.env_factor_num:]
-        env_features, env_factors = self.autoencoder(env_factors)
-        return env_features, env_factors
+        return self.vae(env_factors)
 
     def act(self, observations, critic_observations, obs_history, masks=None, hidden_states=None):
         # env_features = self.estimator(obs_history)
-        env_features, _ = self.get_env_features(critic_observations)
+        env_features, _, _, _ = self.get_env_features(critic_observations)
         observations = torch.cat((observations, env_features), dim=-1)
         input_a = self.memory_a(observations, masks, hidden_states)
         self.update_distribution(input_a.squeeze(0))
@@ -95,8 +94,6 @@ class ActorCritic(nn.Module):
         return self.actor(input_a.squeeze(0))
 
     def evaluate(self, critic_observations, masks=None, hidden_states=None):
-        env_features, _ = self.get_env_features(critic_observations)
-        critic_observations = torch.cat((critic_observations, env_features), dim=-1)
         input_c = self.memory_c(critic_observations, masks, hidden_states)
         return self.critic(input_c.squeeze(0))
 
@@ -144,28 +141,38 @@ class Critic(nn.Module):
         return value
 
 
-class Autoencoder(nn.Module):
-    def __init__(self, input_num, output_num):
-        super(Autoencoder, self).__init__()
+class VAE(nn.Module):
+    def __init__(self, input_num, latent_dim):
+        super(VAE, self).__init__()
 
         self.input_num = input_num
-        self.output_num = output_num
+        self.latent_dim = latent_dim
 
-        self.encoder = nn.Sequential(
+        self.encoder_shared = nn.Sequential(
             nn.Linear(self.input_num, 32),
-            nn.ELU(),
-            nn.Linear(32, self.output_num),
+            nn.ELU()
         )
+        self.encoder_mu = nn.Linear(32, self.latent_dim)
+        self.encoder_logvar = nn.Linear(32, self.latent_dim)
+
         self.decoder = nn.Sequential(
-            nn.Linear(self.output_num, 32),
+            nn.Linear(self.latent_dim, 32),
             nn.ELU(),
-            nn.Linear(32, self.input_num),
+            nn.Linear(32, self.input_num)
         )
+
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return mu + eps * std
 
     def forward(self, env_factor):
-        encoded = self.encoder(env_factor)
-        decoded = self.decoder(encoded)
-        return encoded, decoded
+        h = self.encoder_shared(env_factor)
+        mu = self.encoder_mu(h)
+        logvar = self.encoder_logvar(h)
+        z = self.reparameterize(mu, logvar)
+        decoded = self.decoder(z)
+        return mu, logvar, z, decoded
 
 
 class Memory(torch.nn.Module):

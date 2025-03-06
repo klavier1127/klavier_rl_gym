@@ -155,7 +155,7 @@ class g1Cfg(LeggedRobotCfg):
         only_positive_rewards = False
         # tracking reward = exp(error*sigma)
         tracking_sigma = 0.5
-        max_contact_force = 400     # Forces above this value are penalized
+        max_contact_force = 500     # Forces above this value are penalized
 
         class scales:
             # feet pos
