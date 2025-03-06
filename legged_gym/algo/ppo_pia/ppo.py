@@ -166,17 +166,15 @@ class PPO:
 
             # PIA(Privileged Information Augment) loss
             ref_env_factors = critic_obs_batch[..., -self.env_factor_num:]
-            # VAE loss
-            mu, logvar, z, decoded = self.actor_critic.get_env_features(critic_obs_batch)
-            recon_loss = torch.nn.MSELoss()(decoded, ref_env_factors.detach())
-            kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-            vae_loss = recon_loss + kl_loss
+            # Auto encoder loss
+            ref_env_features, env_factors = self.actor_critic.get_env_features(critic_obs_batch)
+            env_factor_autoencoder_loss = torch.nn.MSELoss()(env_factors, ref_env_factors.detach())
             # Estimator loss
             estimated_env_features = self.actor_critic.estimator(obs_history_batch)
-            estimator_loss = torch.nn.MSELoss()(estimated_env_features, mu.detach())   # ref_env_features
+            estimator_loss = torch.nn.MSELoss()(estimated_env_features, ref_env_features.detach())   # ref_env_features
             # Memory loss
             with torch.no_grad():
-                obs_teacher = torch.cat((obs_batch, mu), dim=-1)
+                obs_teacher = torch.cat((obs_batch, ref_env_features), dim=-1)
                 input_a_teacher = self.actor_critic.memory_a(obs_teacher, masks=masks_batch, hidden_states=hid_states_batch[0])
             obs_student = torch.cat((obs_batch, estimated_env_features), dim=-1)
             input_a_student = self.actor_critic.memory_a(obs_student, masks=masks_batch, hidden_states=hid_states_batch[0])
@@ -187,7 +185,7 @@ class PPO:
             actions_student = self.actor_critic.actor(input_a_student)
             actions_loss = torch.nn.MSELoss()(actions_student, actions_teacher)
 
-            pia_loss = vae_loss + estimator_loss + memory_loss + actions_loss
+            pia_loss = env_factor_autoencoder_loss + estimator_loss + memory_loss + actions_loss
 
             loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + pia_loss
 
