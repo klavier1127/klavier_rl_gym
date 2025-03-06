@@ -37,7 +37,7 @@
   </asset>
 
   <worldbody>
-    <light name="spotlight" target="pelvis" pos="0 -6 4" dir="0 0 -1" cutoff="30" mode="targetbodycom"/>
+    <light name="spotlight" target="pelvis" pos="0 0 2" dir="0 0 -1." cutoff="30" mode="targetbodycom"/>
     <body name="pelvis" pos="0 0 0.793">
       <inertial pos="0.0144905 0.000151462 0.144068" quat="0.999881 -0.000505543 -0.0154276 0.000328408" mass="17.7349" diaginertia="0.552723 0.454092 0.211762"/>
       <joint name="floating_base_joint" type="free" limited="false" actuatorfrclimited="false"/>

@@ -1,5 +1,5 @@
 import math
-from pynput import keyboard
+from pynput.keyboard import Listener
 import numpy as np
 import mujoco, mujoco_viewer
 from tqdm import tqdm
@@ -9,12 +9,6 @@ from legged_gym.envs import g1Cfg
 import torch
 from legged_gym.utils import quat_to_euler
 
-
-
-class cmd:
-    vx = 0.0
-    vy = 0.0
-    dyaw = 0.0
 
 def smooth_sqr_wave(phase, cycle_time):
     p = 2.*np.pi*phase * 1. / cycle_time
@@ -35,17 +29,30 @@ def get_obs(data):
 def pd_control(default_dof_pos, target_q, q, kp, target_dq, dq, kd):
     return (target_q - q + default_dof_pos) * kp + (target_dq - dq) * kd
 
-cmd = np.zeros(3, dtype=np.float32)
+vx, vy, dyaw = 0.0, 0.0, 0.0
 def on_press(key):
+    print(key.char)
+    global vx, vy, dyaw
     try:
-        if key.char == '2': cmd[0] = 1.0    # 前进
-        if key.char == '3': cmd[0] = -1.0   # 后退
-        if key.char == '4': cmd[1] = 0.5    # 左移
-        if key.char == '5': cmd[1] = -0.5   # 右移
-        if key.char == '6': cmd[2] = 1.0    # 左转
-        if key.char == '7': cmd[2] = -1.0   # 右转
-    except: pass
-keyboard.Listener(on_press=on_press).start()
+        if key.char == '2': vx += 0.1
+        elif key.char == '3': vx -= 0.1
+        elif key.char == '4': vy += 0.1
+        elif key.char == '5': vy -= 0.1
+        elif key.char == '6': dyaw += 0.1
+        elif key.char == '7': dyaw -= 0.1
+        elif key.char == '`':
+            vx = 0.0
+            vy = 0.0
+            dyaw = 0.0
+
+        vx = np.clip(vx, -1.0, 2.0)
+        vy = np.clip(vy, -0.5, 0.5)
+        dyaw = np.clip(dyaw, -1.0, 1.0)
+    except AttributeError:
+        pass
+
+listener = Listener(on_press=on_press)
+listener.start()
 
 def run_mujoco(policy, cfg):
     model = mujoco.MjModel.from_xml_path(cfg.sim_config.mujoco_model_path)
@@ -74,6 +81,8 @@ def run_mujoco(policy, cfg):
         q, dq, omega, euler = get_obs(data)
         # 1000hz -> 100hz
         force = [0, 0, 0]
+        cmd = np.array([[vx, vy, dyaw]], dtype=np.float32)
+
         cycle_time = 0.8
         dt_phase = cfg.sim_config.dt / cycle_time
         phase = phase + dt_phase
@@ -107,7 +116,6 @@ def run_mujoco(policy, cfg):
             for i in range(cfg.env.o_h_frame_stack):
                 policy_input_history[0, i * cfg.env.num_single_obs: (i + 1) * cfg.env.num_single_obs] = obs_history[i][0, :]
             action = policy(torch.tensor(policy_input), torch.tensor(policy_input_history)).detach().numpy()
-
             action = np.clip(action, -cfg.normalization.clip_actions, cfg.normalization.clip_actions)
             target_q = action * cfg.control.action_scale
 
@@ -138,8 +146,8 @@ if __name__ == '__main__':
         class sim_config:
             mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/g1/scene.xml'
             sim_duration = 100.0
-            dt = 0.001
-            decimation = 20
+            dt = 0.002
+            decimation = 10
         class robot_config:
             kps = 1 * np.array([100, 100, 100, 150, 40, 40, 100, 100, 100, 150, 40, 40], dtype=np.double)
             kds = np.array([2, 2, 2, 4, 2, 2, 2, 2, 2, 4, 2, 2], dtype=np.double)
