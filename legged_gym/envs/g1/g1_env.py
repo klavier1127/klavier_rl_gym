@@ -181,15 +181,15 @@ class g1Env(LeggedRobot):
 
 
     ################################# balance ##################################################
-    def _reward_orientation(self):
-        error = torch.exp(-torch.sum(torch.abs(self.base_euler_xyz[:, :2]), dim=1) * 10)
-        error += torch.exp(-torch.norm(self.projected_gravity[:, :2], dim=1) * 20)
-        return error / 2.
-
-    def _reward_base_height(self):
-        feet_heights = self.rigid_state[:, self.feet_indices, 2]
-        feet_heights_l = feet_heights[:, 0]
-        feet_heights_r = feet_heights[:, 1]
-        base_feet_heights =  torch.where(feet_heights_l >= feet_heights_r, feet_heights_r, feet_heights_l)
-        base_height = self.root_states[:, 2] - (base_feet_heights - 0.035)
-        return torch.exp(-torch.abs(base_height - self.cfg.rewards.base_height_target) * 100)
+    # def _reward_orientation(self):
+    #     error = torch.exp(-torch.sum(torch.abs(self.base_euler_xyz[:, :2]), dim=1) * 10)
+    #     error += torch.exp(-torch.norm(self.projected_gravity[:, :2], dim=1) * 20)
+    #     return error / 2.
+    #
+    # def _reward_base_height(self):
+    #     feet_heights = self.rigid_state[:, self.feet_indices, 2]
+    #     feet_heights_l = feet_heights[:, 0]
+    #     feet_heights_r = feet_heights[:, 1]
+    #     base_feet_heights =  torch.where(feet_heights_l >= feet_heights_r, feet_heights_r, feet_heights_l)
+    #     base_height = self.root_states[:, 2] - (base_feet_heights - 0.035)
+    #     return torch.exp(-torch.abs(base_height - self.cfg.rewards.base_height_target) * 100)

@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
+
+from legged_gym.algo.ppo_pia.adversary import AdversaryNet
 from legged_gym.algo.utils import unpad_trajectories
 from legged_gym.algo.ppo_pia.estimator import EstimatorNet
 
@@ -31,7 +33,8 @@ class ActorCritic(nn.Module):
         self.env_features_num = env_features_num
 
         self.autoencoder = Autoencoder(self.env_factor_num, self.env_features_num)
-        self.estimator = EstimatorNet(num_obs_history=num_obs_history)
+        self.estimator = EstimatorNet(num_obs_history)
+        self.adversary = AdversaryNet(self.env_features_num)
         memory_input_a = num_actor_obs + self.env_features_num
         memory_input_c = num_critic_obs
         self.memory_a = Memory(memory_input_a, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)

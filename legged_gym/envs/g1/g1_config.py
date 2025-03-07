@@ -100,7 +100,7 @@ class g1Cfg(LeggedRobotCfg):
         push_robots = True
         push_interval_s = 5
         max_push_vel_xy = 1.5
-        max_push_ang_vel = 1.0
+        max_push_ang_vel = 0.8
         dynamic_randomization = 0.02
 
         randomize_commands = True
@@ -159,23 +159,23 @@ class g1Cfg(LeggedRobotCfg):
 
         class scales:
             # feet pos
-            hip_pos = 0.5
-            ankle_pos = 0.3
-            feet_contact = 0.6
+            hip_pos = 0.2
+            ankle_pos = 0.1
+            feet_contact = 0.3
             feet_air_time = -3.0
-            feet_height = -5.0
-            contact_no_vel = -0.3
-            contact_forces = -0.01
+            feet_height = -3.0
+            contact_no_vel = -0.1
+            contact_forces = -0.003
 
             # vel tracking
-            tracking_lin_vel = 2.0
-            tracking_ang_vel = 1.0
-            ang_vel_xy = -0.1
-            lin_vel_z = -3.0
+            tracking_lin_vel = 1.0
+            tracking_ang_vel = 0.5
+            ang_vel_xy = -0.05
+            lin_vel_z = -2.0
 
             # base pos
-            orientation = 1.0
-            base_height = 0.2
+            orientation = -1.
+            base_height = -10.
 
             # energy
             action_rate = -0.01
@@ -185,7 +185,7 @@ class g1Cfg(LeggedRobotCfg):
             collision = -1.0
             dof_pos_limits = -5.0
             torque_limits = -1e-2
-            alive = 0.5
+            alive = 0.3
 
     class normalization:
         class obs_scales:

@@ -176,16 +176,20 @@ class PPO:
             with torch.no_grad():
                 obs_teacher = torch.cat((obs_batch, ref_env_features), dim=-1)
                 input_a_teacher = self.actor_critic.memory_a(obs_teacher, masks=masks_batch, hidden_states=hid_states_batch[0])
-            obs_student = torch.cat((obs_batch, estimated_env_features), dim=-1)
-            input_a_student = self.actor_critic.memory_a(obs_student, masks=masks_batch, hidden_states=hid_states_batch[0])
-            memory_loss = torch.nn.MSELoss()(input_a_student, input_a_teacher)
+
+            delta = self.actor_critic.adversary(estimated_env_features.detach()).clamp(-0.1, 0.1)
+            perturbed_env_features = estimated_env_features + delta
+            obs_student_adv = torch.cat((obs_batch, perturbed_env_features), dim=-1)
+            input_a_student_adv = self.actor_critic.memory_a(obs_student_adv, masks=masks_batch, hidden_states=hid_states_batch[0])
+            memory_loss_adv = torch.nn.MSELoss()(input_a_student_adv, input_a_teacher)
             # Actions loss
             with torch.no_grad():
                 actions_teacher = self.actor_critic.actor(input_a_teacher)
-            actions_student = self.actor_critic.actor(input_a_student)
-            actions_loss = torch.nn.MSELoss()(actions_student, actions_teacher)
 
-            pia_loss = env_factor_autoencoder_loss + estimator_loss + memory_loss + actions_loss
+            actions_student_adv = self.actor_critic.actor(input_a_student_adv)
+            actions_loss_adv = torch.nn.MSELoss()(actions_student_adv, actions_teacher)
+
+            pia_loss = env_factor_autoencoder_loss + estimator_loss + memory_loss_adv + actions_loss_adv
 
             loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + pia_loss
 
