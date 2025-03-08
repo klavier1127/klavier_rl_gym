@@ -101,6 +101,7 @@ class PPO:
         mean_value_loss = 0
         mean_surrogate_loss = 0
         mean_ramp_loss = 0
+        mean_vae_loss = 0
 
         if self.actor_critic.is_recurrent:
             generator = self.storage.reccurent_mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
@@ -169,10 +170,6 @@ class PPO:
             latent_priv, decoded_priv = self.actor_critic.get_priv(critic_obs_batch)
             env_value, decoded_env = self.actor_critic.get_env_value(env_obs_batch)
             ae_loss = torch.nn.MSELoss()(decoded_priv, priv.detach()) + torch.nn.MSELoss()(decoded_env, env_obs_batch.detach())
-            # vae loss
-            valid = (dones_batch == 0).squeeze()
-            vae_loss = self.actor_critic.vae.loss_fn(obs_history_batch, priv, env_obs_batch)
-            vae_loss = torch.mean(vae_loss[valid])
             # Memory loss
             with torch.no_grad():
                 obs_teacher = torch.cat((obs_batch, latent_priv, env_value), dim=-1)
@@ -190,7 +187,7 @@ class PPO:
             actions_student = self.actor_critic.actor(input_a_student)
             actions_loss = torch.nn.MSELoss()(actions_student, actions_teacher.detach())
 
-            ramp_loss = ae_loss + vae_loss + memory_loss + actions_loss
+            ramp_loss = ae_loss + memory_loss + actions_loss
 
             loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + ramp_loss
 
@@ -204,10 +201,22 @@ class PPO:
             mean_surrogate_loss += surrogate_loss.item()
             mean_ramp_loss += ramp_loss.item()
 
+            # vae loss
+            valid = (dones_batch == 0).squeeze()
+            vae_loss = self.actor_critic.vae.loss_fn(obs_history_batch, latent_priv, env_value)
+            vae_loss = torch.mean(vae_loss[valid])
+            # Gradient step
+            self.vae_optimizer.zero_grad()
+            vae_loss.backward()
+            nn.utils.clip_grad_norm_(self.actor_critic.vae.parameters(), self.max_grad_norm)
+            self.vae_optimizer.step()
+            mean_vae_loss += vae_loss.item()
+
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
         mean_ramp_loss /= num_updates
+        mean_vae_loss /= num_updates
         self.storage.clear()
 
-        return mean_value_loss, mean_surrogate_loss, mean_ramp_loss
+        return mean_value_loss, mean_surrogate_loss, mean_ramp_loss, mean_vae_loss

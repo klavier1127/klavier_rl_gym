@@ -228,7 +228,7 @@ class VAE(nn.Module):
             nn.ELU(),
             nn.Linear(128, 256),
             nn.ELU(),
-            nn.Linear(256, 10),
+            nn.Linear(256, 6),
         )
 
     def encode(self, obs_history):
@@ -263,7 +263,7 @@ class VAE(nn.Module):
         recons_loss = torch.nn.MSELoss()(recons, ref_env)
         priv_loss = torch.nn.MSELoss()(priv, ref_priv)
         kld_priv_loss = -0.5 * torch.sum(1 + priv_var - priv_mu ** 2 - priv_var.exp(), dim=-1)
-        kld_env_loss = -0.5 * torch.sum(1 + env_value_var - env_value_mu ** 2 - env_value_var.exp(), dim=-1)
+        kld_env_loss = -0.5 * torch.sum(1 + env_value_var - env_value_mu ** 2 - env_value_var.exp(), dim=-1) + 1e-8
         kld_loss = 0.5 * (kld_env_loss + kld_priv_loss)
         total_loss = recons_loss + priv_loss + kld_weight * kld_loss
         return total_loss

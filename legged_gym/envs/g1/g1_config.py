@@ -31,13 +31,13 @@ class g1Cfg(LeggedRobotCfg):
         flip_visual_attachments = False
 
     class terrain(LeggedRobotCfg.terrain):
-        # mesh_type = 'plane'
-        # curriculum = False
-        # measure_heights = False
+        mesh_type = 'plane'
+        curriculum = False
+        measure_heights = False
 
-        mesh_type = 'trimesh'
-        curriculum = True
-        measure_heights = True
+        # mesh_type = 'trimesh'
+        # curriculum = True
+        # measure_heights = True
 
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
         terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
