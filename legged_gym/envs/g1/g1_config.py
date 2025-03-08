@@ -8,14 +8,14 @@ class g1Cfg(LeggedRobotCfg):
         o_h_frame_stack = 25
 
         num_single_obs = 46
-        single_num_privileged_obs = 54
+        single_num_privileged_obs = 52
+        num_env_obs = 1 + 9
         num_observations = int(frame_stack * num_single_obs)
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)
 
         num_actions = 12
         num_envs = 4096
-        num_env_obs = 1 + 49
         episode_length_s = 24  # episode length in seconds
         use_ref_actions = False
 
@@ -31,13 +31,13 @@ class g1Cfg(LeggedRobotCfg):
         flip_visual_attachments = False
 
     class terrain(LeggedRobotCfg.terrain):
-        mesh_type = 'plane'
-        curriculum = False
-        measure_heights = False
+        # mesh_type = 'plane'
+        # curriculum = False
+        # measure_heights = False
 
-        # mesh_type = 'trimesh'
-        # curriculum = True
-        # measure_heights = True
+        mesh_type = 'trimesh'
+        curriculum = True
+        measure_heights = True
 
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
         terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
@@ -203,7 +203,7 @@ class g1Cfg(LeggedRobotCfg):
 class g1CfgPPO(LeggedRobotCfgPPO):
     # OnPolicyRunner  EstOnPolicyRunner  RNNOnPolicyRunner
     # DWLOnPolicyRunner PIAOnPolicyRunner SymOnPolicyRunner
-    runner_class_name = 'PIAOnPolicyRunner'
+    runner_class_name = 'RAMPOnPolicyRunner'
 
     class policy:
         # # only for 'OnPolicyRunner', 'OnPolicyRunner' and 'SymOnPolicyRunner':

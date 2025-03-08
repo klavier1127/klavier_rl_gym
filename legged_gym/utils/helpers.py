@@ -273,11 +273,16 @@ class PolicyExporterLSTM(torch.nn.Module):
         self.actor = copy.deepcopy(actor_critic.actor)
         self.is_recurrent = actor_critic.is_recurrent
         self.memory = copy.deepcopy(actor_critic.memory_a.rnn)
+        self.vae = copy.deepcopy(actor_critic.vae)
         self.memory.cpu()
         self.register_buffer(f'hidden_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
         self.register_buffer(f'cell_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
 
     def forward(self, obs, obs_history):
+        latent, _ = self.vae(obs_history)
+        priv, env_value = latent
+        obs = torch.cat((obs, priv, env_value), dim=-1)
+
         out, (h, c) = self.memory(obs.unsqueeze(0), (self.hidden_state, self.cell_state))
         self.hidden_state[:] = h
         self.cell_state[:] = c
@@ -329,14 +334,15 @@ class PolicyExporterPIA(torch.nn.Module):
         super().__init__()
         self.actor = copy.deepcopy(actor_critic.actor)
         self.memory = copy.deepcopy(actor_critic.memory_a.rnn)
-        self.estimator = copy.deepcopy(actor_critic.estimator)
+        self.vae = copy.deepcopy(actor_critic.vae)
         self.memory.cpu()
         self.register_buffer(f'hidden_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
         self.register_buffer(f'cell_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
 
     def forward(self, obs, obs_history):
-        latent_priv, latent_env = self.estimator(obs_history)
-        obs = torch.cat((obs, latent_priv, latent_env), dim=-1)
+        latent, _ = self.vae(obs_history)
+        priv, env_value = latent
+        obs = torch.cat((obs, priv, env_value), dim=-1)
         out, (h, c) = self.memory(obs.unsqueeze(0), (self.hidden_state, self.cell_state))
         self.hidden_state[:] = h
         self.cell_state[:] = c

@@ -1,23 +1,92 @@
 import torch.nn as nn
 import torch
 from legged_gym.algo.utils.torch_utils import get_activation, check_cnnoutput
-from torch.nn import functional as F
 
 
-class EstimatorNet(nn.Module):
-    def __init__(self,num_obs_history):
-        super(EstimatorNet, self).__init__()
-        activation_fn = get_activation("elu")
-        self.encoder = nn.Sequential(
-            nn.Linear(num_obs_history, 512),
-            activation_fn,
-            nn.Linear(512, 256),
-            activation_fn,
-            nn.Linear(256, 6),
+class VAE(nn.Module):
+    def __init__(self,
+                 num_obs_history,
+                 num_latent,
+                 activation='elu',
+                 decoder_hidden_dims=[512, 256, 128], ):
+        super(VAE, self).__init__()
+
+        self.num_obs_history = num_obs_history
+        self.num_latent = num_latent
+
+        # Build Encoder
+        self.encoder = MLPHistoryEncoder(
+            num_obs_history=num_obs_history,
+            num_latent=num_latent * 4,
+            activation=activation,
+            adaptation_module_branch_hidden_dims=[512, 256],
         )
+        self.latent_mu = nn.Linear(num_latent * 4, num_latent)
+        self.latent_var = nn.Linear(num_latent * 4, num_latent)
+
+        # Build Decoder
+        modules = []
+        activation_fn = get_activation(activation)
+        decoder_input_dim = num_latent
+        modules.extend(
+            [nn.Linear(decoder_input_dim, decoder_hidden_dims[0]),
+             activation_fn]
+        )
+        for l in range(len(decoder_hidden_dims)):
+            if l == len(decoder_hidden_dims) - 1:
+                modules.append(nn.Linear(decoder_hidden_dims[l], num_latent))
+            else:
+                modules.append(nn.Linear(decoder_hidden_dims[l], decoder_hidden_dims[l + 1]))
+                modules.append(activation_fn)
+        self.decoder = nn.Sequential(*modules)
+
+    def encode(self, obs_history):
+        encoded = self.encoder(obs_history)
+        latent_mu = self.latent_mu(encoded)
+        latent_var = self.latent_var(encoded)
+        return latent_mu, latent_var
+
+    def decode(self, z):
+        output = self.decoder(z)
+        return output
 
     def forward(self, obs_history):
-        return self.encoder(obs_history)
+        latent_mu, latent_var = self.encode(obs_history)
+        z = self.reparameterize(latent_mu, latent_var)
+        return z, latent_mu, latent_var
+
+    def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+        """
+        Will a single z be enough ti compute the expectation
+        for the loss??
+        :param mu: (Tensor) Mean of the latent Gaussian
+        :param logvar: (Tensor) Standard deviation of the latent Gaussian
+        :return:
+        """
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return eps * std + mu
+
+    def loss_fn(self, obs_history, next_obs, kld_weight=1.0):
+        z, latent_mu, latent_var = self.forward(obs_history)
+        # Reconstruction loss
+        recons = self.decode(z)
+        recons_loss = torch.nn.MSELoss()(recons, next_obs)
+        # Supervised loss
+        kld_loss = -0.5 * torch.sum(1 + latent_var - latent_mu ** 2 - latent_var.exp(), dim=-1)
+        total_loss = recons_loss + kld_weight * kld_loss
+        return total_loss
+
+    def sample(self, obs_history):
+        z, _, _ = self.forward(obs_history)
+        return z
+
+    def inference(self, obs_history):
+        _, latent_mu, latent_var = self.forward(obs_history)
+        return latent_mu
+
+
+
 
 
 

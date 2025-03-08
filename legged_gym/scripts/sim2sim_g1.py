@@ -154,7 +154,7 @@ if __name__ == '__main__':
             tau_limit = 50000. * np.ones(12, dtype=np.double)
 
 
-    model_path = "../logs/g1/exported/policies/policy_pia.pt"
+    model_path = "../logs/g1/exported/policies/policy_lstm.pt"
     # model_path = "../logs/g1/exported/policies/policy_pia_example_trimesh.pt"
     # model_path = "../logs/g1/exported/policies/policy_lstm.pt"
     # model_path = "../logs/g1/exported/policies/policy_gru.pt"

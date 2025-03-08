@@ -63,8 +63,6 @@ class g1Env(LeggedRobot):
         phase_cos = torch.cos(2 * torch.pi * self.phase)
         q = (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos
         dq = self.dof_vel * self.obs_scales.dof_vel
-        push_robot = torch.norm(self.rand_push_force[:, :2] - self.last_rand_push_force[:, :2], dim=1) > 0.1
-        self.last_rand_push_force[:, :2] = self.rand_push_force[:, :2]
 
         self.privileged_obs_buf = torch.cat((
             phase_sin,
@@ -77,10 +75,8 @@ class g1Env(LeggedRobot):
             self.base_euler_xyz[:, :2] * self.obs_scales.quat,
 
             self.base_lin_vel * self.obs_scales.lin_vel,
-            self.root_states[:, 2].unsqueeze(1) - self.cfg.rewards.base_height_target,
+            (self.root_states[:, 2].unsqueeze(1) - self.cfg.rewards.base_height_target) * 10.,
             contact_mask,
-            push_robot.unsqueeze(1),
-            self.rew_buf.unsqueeze(1),
         ), dim=-1)
 
         self.obs_buf = torch.cat((

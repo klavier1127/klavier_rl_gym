@@ -8,6 +8,7 @@ class RolloutStorage:
             self.observations = None
             self.critic_observations = None
             self.obs_history = None
+            self.env_observations = None
             self.actions = None
             self.rewards = None
             self.dones = None
@@ -20,12 +21,13 @@ class RolloutStorage:
         def clear(self):
             self.__init__()
 
-    def __init__(self, num_envs, num_transitions_per_env, obs_shape, privileged_obs_shape, obs_history_shape, actions_shape, device="cpu"):
+    def __init__(self, num_envs, num_transitions_per_env, obs_shape, privileged_obs_shape, obs_history_shape, env_obs_shape, actions_shape, device="cpu"):
         self.device = device
 
         self.obs_shape = obs_shape
         self.privileged_obs_shape = privileged_obs_shape
         self.obs_history_shape = obs_history_shape
+        self.env_obs_shape = env_obs_shape
         self.actions_shape = actions_shape
 
         # Core
@@ -37,6 +39,7 @@ class RolloutStorage:
         else:
             self.privileged_observations = None
         self.obs_history = torch.zeros(num_transitions_per_env, num_envs, *obs_history_shape, device=self.device)
+        self.env_observations = torch.zeros(num_transitions_per_env, num_envs, *env_obs_shape, device=self.device)
         self.rewards = torch.zeros(num_transitions_per_env, num_envs, 1, device=self.device)
         self.actions = torch.zeros(num_transitions_per_env, num_envs, *actions_shape, device=self.device)
         self.dones = torch.zeros(num_transitions_per_env, num_envs, 1, device=self.device).byte()
@@ -65,6 +68,7 @@ class RolloutStorage:
         if self.privileged_observations is not None:
             self.privileged_observations[self.step].copy_(transition.critic_observations)
         self.obs_history[self.step].copy_(transition.obs_history)
+        self.env_observations[self.step].copy_(transition.env_observations)
         self.actions[self.step].copy_(transition.actions)
         self.rewards[self.step].copy_(transition.rewards.view(-1, 1))
         self.dones[self.step].copy_(transition.dones.view(-1, 1))
@@ -135,6 +139,7 @@ class RolloutStorage:
         else:
             critic_observations = observations
         obs_history = self.obs_history.flatten(0, 1)
+        env_observations = self.env_observations.flatten(0, 1)
         actions = self.actions.flatten(0, 1)
         values = self.values.flatten(0, 1)
         returns = self.returns.flatten(0, 1)
@@ -152,6 +157,7 @@ class RolloutStorage:
                 obs_batch = observations[batch_idx]
                 critic_observations_batch = critic_observations[batch_idx]
                 obs_history_batch = obs_history[batch_idx]
+                env_observations_batch = env_observations[batch_idx]
                 actions_batch = actions[batch_idx]
                 target_values_batch = values[batch_idx]
                 returns_batch = returns[batch_idx]
@@ -159,7 +165,7 @@ class RolloutStorage:
                 advantages_batch = advantages[batch_idx]
                 old_mu_batch = old_mu[batch_idx]
                 old_sigma_batch = old_sigma[batch_idx]
-                yield obs_batch, critic_observations_batch, obs_history_batch, actions_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (
+                yield obs_batch, critic_observations_batch, obs_history_batch, env_observations_batch, actions_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (
                     None,
                     None,
                 ), None
@@ -172,7 +178,8 @@ class RolloutStorage:
         else:
             padded_critic_obs_trajectories = padded_obs_trajectories
         padded_obs_history_trajectories, trajectory_masks = split_and_pad_trajectories(self.obs_history, self.dones)
-
+        padded_env_observations_trajectories, trajectory_masks = split_and_pad_trajectories(self.env_observations, self.dones)
+        padded_dones_trajectories, trajectory_masks = split_and_pad_trajectories(self.dones, self.dones)
         mini_batch_size = self.num_envs // num_mini_batches
         for ep in range(num_epochs):
             first_traj = 0
@@ -191,6 +198,8 @@ class RolloutStorage:
                 obs_batch = padded_obs_trajectories[:, first_traj:last_traj]
                 critic_obs_batch = padded_critic_obs_trajectories[:, first_traj:last_traj]
                 obs_history_batch = padded_obs_history_trajectories[:, first_traj:last_traj]
+                env_observations_batch = padded_env_observations_trajectories[:, first_traj:last_traj]
+                dones_batch = padded_dones_trajectories[:, first_traj:last_traj]
                 actions_batch = self.actions[:, start:stop]
                 old_mu_batch = self.mu[:, start:stop]
                 old_sigma_batch = self.sigma[:, start:stop]
@@ -198,6 +207,7 @@ class RolloutStorage:
                 advantages_batch = self.advantages[:, start:stop]
                 values_batch = self.values[:, start:stop]
                 old_actions_log_prob_batch = self.actions_log_prob[:, start:stop]
+
 
                 # reshape to [num_envs, time, num layers, hidden dim] (original shape: [time, num_layers, num_envs, hidden_dim])
                 # then take only time steps after dones (flattens num envs and time dimensions),
@@ -219,9 +229,9 @@ class RolloutStorage:
                 hid_a_batch = hid_a_batch[0] if len(hid_a_batch) == 1 else hid_a_batch
                 hid_c_batch = hid_c_batch[0] if len(hid_c_batch) == 1 else hid_c_batch
 
-                yield obs_batch, critic_obs_batch, obs_history_batch, actions_batch, values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (
+                yield obs_batch, critic_obs_batch, obs_history_batch, env_observations_batch, actions_batch, values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (
                     hid_a_batch,
                     hid_c_batch,
-                ), masks_batch
+                ), masks_batch, dones_batch
 
                 first_traj = last_traj
