@@ -21,7 +21,7 @@ class LeggedRobotCfg(BaseConfig):
         restitution = 0.
         # rough terrain only:
         measure_heights = True
-        measured_points_x = [-0.5, -0.4, -0.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3, 0.4, 0.5] # 1mx1.6m rectangle (without center line)
+        measured_points_x = [-0.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3] # 1mx1.6m rectangle (without center line)
         measured_points_y = [-0.3, -0.2, -0.1, 0., 0.1, 0.2, 0.3]
         selected = False # select a unique terrain type and pass all arguments
         terrain_kwargs = None # Dict of arguments for selected terrain

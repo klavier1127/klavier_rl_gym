@@ -8,6 +8,7 @@ class VecEnv(ABC):
     num_obs: int
     num_obs_history: int
     num_privileged_obs: int
+    num_env_obs: int
     num_rma_obs: int
     num_actions: int
     max_episode_length: int
@@ -52,4 +53,8 @@ class VecEnv(ABC):
 
     @abstractmethod
     def get_amp_observations(self) -> Union[torch.Tensor, None]:
+        pass
+
+    @abstractmethod
+    def get_env_observations(self) -> Union[torch.Tensor, None]:
         pass

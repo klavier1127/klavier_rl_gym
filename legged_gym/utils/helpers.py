@@ -335,8 +335,8 @@ class PolicyExporterPIA(torch.nn.Module):
         self.register_buffer(f'cell_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
 
     def forward(self, obs, obs_history):
-        spt = self.estimator(obs_history)
-        obs = torch.cat((obs, spt), dim=-1)
+        latent_priv, latent_env = self.estimator(obs_history)
+        obs = torch.cat((obs, latent_priv, latent_env), dim=-1)
         out, (h, c) = self.memory(obs.unsqueeze(0), (self.hidden_state, self.cell_state))
         self.hidden_state[:] = h
         self.cell_state[:] = c

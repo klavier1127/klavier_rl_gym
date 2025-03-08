@@ -16,6 +16,7 @@ class g1Env(LeggedRobot):
         self.max_feet_air_time = torch.zeros_like(self.feet_air_time)
         self.feet_phase = torch.zeros((self.num_envs, 2), device=self.device)
 
+        self.env_obs_buf = torch.zeros((self.num_envs, self.cfg.env.num_env_obs), device=self.device)
 
     def _get_noise_scale_vec(self, cfg):
         noise_vec = torch.zeros(self.cfg.env.num_single_obs, device=self.device)
@@ -44,6 +45,10 @@ class g1Env(LeggedRobot):
         # actions += self.cfg.domain_rand.dynamic_randomization * torch.randn_like(actions) * actions
         return super().step(actions)
 
+    def post_physics_step(self):
+        super().post_physics_step()
+        self.extras['env_obs'] = self.get_env_observations()
+
     def foot_positions_in_base_frame(self):
         feet_indices = self.feet_indices
         feet_states = self.rigid_state[:, feet_indices, :]
@@ -53,28 +58,6 @@ class g1Env(LeggedRobot):
         return torch.concat((Lfoot_positions_local, Rfoot_positions_local), dim=-1)
 
     def compute_observations(self):
-        # if not hasattr(self, 'amp_obs_list'):
-        #     self.amp_obs_list = []
-        # foot_pos = self.foot_positions_in_base_frame()
-        # # print(foot_pos-self.rigid_state[:,self.feet_indices,0:3].squeeze(0))
-        # amp_obs = torch.cat((
-        #     self.root_states[:, :3].squeeze(0),
-        #     self.base_quat.squeeze(0),
-        #     self.dof_pos.squeeze(0),
-        #     foot_pos.squeeze(0),
-        #     self.base_lin_vel.squeeze(0),
-        #     self.base_ang_vel.squeeze(0),
-        #     self.dof_vel.squeeze(0),
-        # ), dim=0)
-        # self.amp_obs_list.append(amp_obs)
-        # if len(self.amp_obs_list) == 80:
-        #     with open('walk_right.txt', 'w') as file:
-        #         for i, obs in enumerate(self.amp_obs_list):
-        #             formatted_obs = [f"{x:.6f}" for x in obs.tolist()]
-        #             file.write('[' + ','.join(formatted_obs) + ']')
-        #             if i < len(self.amp_obs_list) - 1:
-        #                 file.write(',\n')
-
         contact_mask = self._get_contact_mask()
         phase_sin = torch.sin(2 * torch.pi * self.phase)
         phase_cos = torch.cos(2 * torch.pi * self.phase)
@@ -111,10 +94,6 @@ class g1Env(LeggedRobot):
             self.base_euler_xyz[:, :2] * self.obs_scales.quat,
         ), dim=-1)
 
-        if self.cfg.terrain.measure_heights:
-            heights = self.root_states[:, 2].unsqueeze(1) - self.cfg.rewards.base_height_target - self.measured_heights
-            self.privileged_obs_buf = torch.cat((self.privileged_obs_buf, heights), dim=-1)
-
         if self.add_noise:
             self.obs_buf = self.obs_buf.clone() + (2 * torch.rand_like(self.obs_buf) -1) * self.noise_scale_vec * self.cfg.noise.noise_level
         else:
@@ -126,6 +105,16 @@ class g1Env(LeggedRobot):
         self.obs_buf = torch.cat([self.obs_history[i] for i in range(-self.cfg.env.frame_stack, 0)], dim=1)
         self.privileged_obs_buf = torch.cat([self.critic_history[i] for i in range(self.cfg.env.c_frame_stack)], dim=1)
         self.obs_history_buf = torch.cat([self.obs_history[i] for i in range(self.cfg.env.o_h_frame_stack)], dim=1)
+
+
+    def get_env_observations(self):
+        if self.cfg.terrain.measure_heights:
+            self.env_obs_buf = torch.cat((
+                self.env_frictions,  # 1
+                self.measured_heights,  # 7 * 7
+            ), dim=-1)
+        return self.env_obs_buf
+
 
     def reset_idx(self, env_ids):
         self.ref_dof_pos = torch.zeros_like(self.dof_pos)
@@ -186,10 +175,10 @@ class g1Env(LeggedRobot):
     #     error += torch.exp(-torch.norm(self.projected_gravity[:, :2], dim=1) * 20)
     #     return error / 2.
     #
-    # def _reward_base_height(self):
-    #     feet_heights = self.rigid_state[:, self.feet_indices, 2]
-    #     feet_heights_l = feet_heights[:, 0]
-    #     feet_heights_r = feet_heights[:, 1]
-    #     base_feet_heights =  torch.where(feet_heights_l >= feet_heights_r, feet_heights_r, feet_heights_l)
-    #     base_height = self.root_states[:, 2] - (base_feet_heights - 0.035)
-    #     return torch.exp(-torch.abs(base_height - self.cfg.rewards.base_height_target) * 100)
+    def _reward_base_height(self):
+        feet_heights = self.rigid_state[:, self.feet_indices, 2]
+        feet_heights_l = feet_heights[:, 0]
+        feet_heights_r = feet_heights[:, 1]
+        base_feet_heights =  torch.where(feet_heights_l >= feet_heights_r, feet_heights_r, feet_heights_l)
+        base_height = self.root_states[:, 2] - (base_feet_heights - 0.035)
+        return torch.square(base_height - self.cfg.rewards.base_height_target)

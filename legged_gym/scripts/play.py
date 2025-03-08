@@ -20,8 +20,8 @@ def play(args):
     env_cfg.env.num_envs = min(env_cfg.env.num_envs, 64)
     env_cfg.sim.max_gpu_contact_pairs = 2 ** 10
     # env_cfg.terrain.mesh_type = 'heightfield'
-    # env_cfg.terrain.mesh_type = 'trimesh'
-    env_cfg.terrain.mesh_type = 'plane'
+    env_cfg.terrain.mesh_type = 'trimesh'
+    # env_cfg.terrain.mesh_type = 'plane'
     env_cfg.terrain.num_rows = 5
     env_cfg.terrain.num_cols = 5
     env_cfg.terrain.curriculum = False

@@ -26,7 +26,7 @@ class PPO:
         schedule="fixed",
         desired_kl=0.01,
         device="cpu",
-        env_factor_num=8,
+        priv_num=8,
     ):
         self.device = device
 
@@ -53,12 +53,11 @@ class PPO:
         self.max_grad_norm = max_grad_norm
         self.use_clipped_value_loss = use_clipped_value_loss
 
-        # self.env_factor_num = 12
-        self.env_factor_num = env_factor_num
+        self.priv_num = priv_num
 
-    def init_storage(self, num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, obs_history_shape, action_shape):
+    def init_storage(self, num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, obs_history_shape, env_obs_shape, action_shape):
         self.storage = RolloutStorage(
-            num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, obs_history_shape, action_shape, self.device
+            num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, obs_history_shape, env_obs_shape, action_shape, self.device
         )
 
     def test_mode(self):
@@ -67,12 +66,12 @@ class PPO:
     def train_mode(self):
         self.actor_critic.train()
 
-    def act(self, obs, critic_obs, obs_history):
+    def act(self, obs, critic_obs, obs_history, env_obs):
         if self.actor_critic.is_recurrent:
             self.transition.hidden_states = self.actor_critic.get_hidden_states()
         # Compute the actions and values
-        self.transition.actions = self.actor_critic.act(obs, critic_obs, obs_history).detach()
-        self.transition.values = self.actor_critic.evaluate(critic_obs).detach()
+        self.transition.actions = self.actor_critic.act(obs, critic_obs, obs_history, env_obs).detach()
+        self.transition.values = self.actor_critic.evaluate(critic_obs, env_obs).detach()
         self.transition.actions_log_prob = self.actor_critic.get_actions_log_prob(self.transition.actions).detach()
         self.transition.action_mean = self.actor_critic.action_mean.detach()
         self.transition.action_sigma = self.actor_critic.action_std.detach()
@@ -80,6 +79,7 @@ class PPO:
         self.transition.observations = obs
         self.transition.critic_observations = critic_obs
         self.transition.obs_history = obs_history
+        self.transition.env_observations = env_obs
         return self.transition.actions
 
     def process_env_step(self, rewards, dones, infos):
@@ -96,8 +96,8 @@ class PPO:
         self.transition.clear()
         self.actor_critic.reset(dones)
 
-    def compute_returns(self, last_critic_obs):
-        last_values = self.actor_critic.evaluate(last_critic_obs).detach()
+    def compute_returns(self, last_critic_obs, env_obs):
+        last_values = self.actor_critic.evaluate(last_critic_obs, env_obs).detach()
         self.storage.compute_returns(last_values, self.gamma, self.lam)
 
     def update(self):
@@ -113,6 +113,7 @@ class PPO:
             obs_batch,
             critic_obs_batch,
             obs_history_batch,
+            env_obs_batch,
             actions_batch,
             target_values_batch,
             advantages_batch,
@@ -124,10 +125,10 @@ class PPO:
             masks_batch,
         ) in generator:
 
-            self.actor_critic.act(obs_batch, critic_obs_batch, obs_history_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
+            self.actor_critic.act(obs_batch, critic_obs_batch, obs_history_batch, env_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
             actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
             value_batch = self.actor_critic.evaluate(
-                critic_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1]
+                critic_obs_batch, env_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1]
             )
             mu_batch = self.actor_critic.action_mean
             sigma_batch = self.actor_critic.action_std
@@ -165,27 +166,30 @@ class PPO:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
             # PIA(Privileged Information Augment) loss
-            ref_env_factors = critic_obs_batch[..., -self.env_factor_num:]
+            priv = critic_obs_batch[..., -self.priv_num:]
             # Auto encoder loss
-            ref_env_features, env_factors = self.actor_critic.get_env_features(critic_obs_batch)
-            env_factor_autoencoder_loss = torch.nn.MSELoss()(env_factors, ref_env_factors.detach())
+            latent_priv, decoded_priv = self.actor_critic.get_latent_priv(critic_obs_batch)
+            env_factor_autoencoder_loss = torch.nn.MSELoss()(decoded_priv, priv.detach())
             # Estimator loss
-            estimated_env_features = self.actor_critic.estimator(obs_history_batch)
-            estimator_loss = torch.nn.MSELoss()(estimated_env_features, ref_env_features.detach())   # ref_env_features
+            with torch.no_grad():
+                env = self.actor_critic.get_env(env_obs_batch)
+            estimated_latent_priv, estimated_env = self.actor_critic.estimator(obs_history_batch)
+            latent_priv_loss = torch.nn.MSELoss()(estimated_latent_priv, latent_priv.detach())
+            env_loss = torch.nn.MSELoss()(estimated_env, env.detach())
+            estimator_loss = latent_priv_loss + env_loss
             # Memory loss
             with torch.no_grad():
-                obs_teacher = torch.cat((obs_batch, ref_env_features), dim=-1)
+                obs_teacher = torch.cat((obs_batch, latent_priv, env), dim=-1)
                 input_a_teacher = self.actor_critic.memory_a(obs_teacher, masks=masks_batch, hidden_states=hid_states_batch[0])
-
-            delta = self.actor_critic.adversary(estimated_env_features.detach()).clamp(-0.1, 0.1)
-            perturbed_env_features = estimated_env_features + delta
+            estimated_latent = torch.cat((estimated_latent_priv, estimated_env), dim=-1)
+            delta = self.actor_critic.adversary(estimated_latent).clamp(-0.1, 0.1)
+            perturbed_env_features = estimated_latent + delta
             obs_student_adv = torch.cat((obs_batch, perturbed_env_features), dim=-1)
             input_a_student_adv = self.actor_critic.memory_a(obs_student_adv, masks=masks_batch, hidden_states=hid_states_batch[0])
             memory_loss_adv = torch.nn.MSELoss()(input_a_student_adv, input_a_teacher)
             # Actions loss
             with torch.no_grad():
                 actions_teacher = self.actor_critic.actor(input_a_teacher)
-
             actions_student_adv = self.actor_critic.actor(input_a_student_adv)
             actions_loss_adv = torch.nn.MSELoss()(actions_student_adv, actions_teacher)
 

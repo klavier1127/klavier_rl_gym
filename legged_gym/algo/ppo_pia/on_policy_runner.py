@@ -39,7 +39,7 @@ class PIAOnPolicyRunner:
 
         # init storage and model
         self.alg.init_storage(self.env.num_envs, self.num_steps_per_env, [self.env.num_obs],
-                              [self.env.num_privileged_obs], [self.env.num_obs_history], [self.env.num_actions])
+                              [self.env.num_privileged_obs], [self.env.num_obs_history], [self.env.num_env_obs], [self.env.num_actions])
 
         # Log
         self.log_dir = log_dir
@@ -61,7 +61,8 @@ class PIAOnPolicyRunner:
         privileged_obs = self.env.get_privileged_observations()
         critic_obs = privileged_obs if privileged_obs is not None else obs
         obs_history = self.env.get_obs_history()
-        obs, critic_obs, obs_history = obs.to(self.device), critic_obs.to(self.device), obs_history.to(self.device)
+        env_obs = self.env.get_env_observations()
+        obs, critic_obs, obs_history, env_obs = obs.to(self.device), critic_obs.to(self.device), obs_history.to(self.device), env_obs.to(self.device)
         self.alg.actor_critic.train()  # switch to train mode (for dropout for example)
 
         ep_infos = []
@@ -76,7 +77,7 @@ class PIAOnPolicyRunner:
             # Rollout
             with torch.inference_mode():
                 for i in range(self.num_steps_per_env):
-                    actions = self.alg.act(obs, critic_obs, obs_history)
+                    actions = self.alg.act(obs, critic_obs, obs_history, env_obs)
                     obs, privileged_obs, obs_history, rewards, dones, infos = self.env.step(actions)
                     critic_obs = privileged_obs if privileged_obs is not None else obs
                     obs, critic_obs, obs_history, rewards, dones = obs.to(self.device), critic_obs.to(self.device), obs_history.to(self.device), rewards.to(self.device), dones.to(self.device)
@@ -98,7 +99,7 @@ class PIAOnPolicyRunner:
                 collection_time = stop - start
                 # Learning step
                 start = stop
-                self.alg.compute_returns(critic_obs)
+                self.alg.compute_returns(critic_obs, env_obs)
 
             mean_value_loss, mean_surrogate_loss, mean_pia_loss = self.alg.update()
 
