@@ -203,7 +203,7 @@ class PPO:
             # vae loss
             valid = (dones_batch == 0).squeeze()
             vae_loss = self.actor_critic.vae.loss_fn(obs_history_batch.detach(), latent_priv.detach(), env_value.detach())
-            vae_loss = vae_loss[valid]
+            vae_loss = torch.mean(vae_loss[valid])
             # Gradient step
             self.vae_optimizer.zero_grad()
             vae_loss.backward()
