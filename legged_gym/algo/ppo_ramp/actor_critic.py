@@ -83,6 +83,7 @@ class ActorCritic(nn.Module):
     def act(self, observations, critic_observations, obs_history, env_obs, masks=None, hidden_states=None):
         latent_priv, _ = self.get_priv(critic_observations)
         env_value, _ = self.get_env_value(env_obs)
+        # latent_priv, env_value = self.vae.sample(obs_history)
         input_ma = torch.cat((observations, latent_priv, env_value), dim=-1)
         input_a = self.memory_a(input_ma, masks, hidden_states)
         self.update_distribution(input_a.squeeze(0))
@@ -211,24 +212,22 @@ class VAE(nn.Module):
             nn.Linear(num_obs_history, 512),
             nn.ELU(),
             nn.Linear(512, 256),
-            nn.ELU(),
-            nn.Linear(256, 128),
         )
 
-        self.priv_mu = nn.Linear(128, 6)
-        self.priv_var = nn.Linear(128, 6)
+        self.priv_mu = nn.Linear(256, 6)
+        self.priv_var = nn.Linear(256, 6)
 
-        self.env_value_mu = nn.Linear(128, 6)
-        self.env_value_var = nn.Linear(128, 6)
+        self.env_value_mu = nn.Linear(256, 6)
+        self.env_value_var = nn.Linear(256, 6)
 
         # Build Decoder
         decoder_input_dim = 6 + 6
         self.decoder = nn.Sequential(
-            nn.Linear(decoder_input_dim, 128),
+            nn.Linear(decoder_input_dim, 256),
             nn.ELU(),
-            nn.Linear(128, 256),
+            nn.Linear(256, 512),
             nn.ELU(),
-            nn.Linear(256, 6),
+            nn.Linear(512, 6),
         )
 
     def encode(self, obs_history):
@@ -263,7 +262,7 @@ class VAE(nn.Module):
         recons_loss = torch.nn.MSELoss()(recons, ref_env)
         priv_loss = torch.nn.MSELoss()(priv, ref_priv)
         kld_priv_loss = -0.5 * torch.sum(1 + priv_var - priv_mu ** 2 - priv_var.exp(), dim=-1)
-        kld_env_loss = -0.5 * torch.sum(1 + env_value_var - env_value_mu ** 2 - env_value_var.exp(), dim=-1) + 1e-8
+        kld_env_loss = -0.5 * torch.sum(1 + env_value_var - env_value_mu ** 2 - env_value_var.exp(), dim=-1)
         kld_loss = 0.5 * (kld_env_loss + kld_priv_loss)
         total_loss = recons_loss + priv_loss + kld_weight * kld_loss
         return total_loss

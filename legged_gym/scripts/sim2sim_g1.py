@@ -29,7 +29,7 @@ def get_obs(data):
 def pd_control(default_dof_pos, target_q, q, kp, target_dq, dq, kd):
     return (target_q - q + default_dof_pos) * kp + (target_dq - dq) * kd
 
-vx, vy, dyaw = 0.0, 0.0, 0.0
+vx, vy, dyaw = 0.5, 0.0, 0.0
 def on_press(key):
     print(key.char)
     global vx, vy, dyaw
