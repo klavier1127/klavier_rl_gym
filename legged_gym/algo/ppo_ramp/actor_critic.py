@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.distributions import Normal
 from legged_gym.algo.utils import unpad_trajectories
-import torch.nn.functional as F
+
 
 class ActorCritic(nn.Module):
     is_recurrent = True
@@ -271,7 +271,7 @@ class VAE(nn.Module):
         priv_loss = torch.nn.MSELoss()(est_priv, ref_priv)
         env_value_loss = torch.nn.MSELoss()(est_env, ref_env)
         supervised_loss = priv_loss + env_value_loss
-        # recon loss
+        # recons loss
         priv_recons, env_recons = self.decode(est_priv, est_env)
         priv_recon_loss = torch.nn.MSELoss()(priv_recons, priv)
         env_recons_loss = torch.nn.MSELoss()(env_recons, env)
@@ -283,10 +283,12 @@ class VAE(nn.Module):
         total_loss = supervised_loss + recons_loss + kld_weight * kld_loss
         return total_loss
 
+    # 输出采样值（student）
     def sample(self, obs_history):
         estimation, _ = self.forward(obs_history)
         return estimation
 
+    # 输出均值（teacher）
     def inference(self, obs_history):
         _, latent_params = self.forward(obs_history)
         priv_mu, priv_var, env_value_mu, env_value_var = latent_params

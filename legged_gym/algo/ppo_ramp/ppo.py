@@ -172,20 +172,6 @@ class PPO:
             env_value, decoded_env = self.actor_critic.get_env_value(env_obs_batch)
             ae_loss = torch.nn.MSELoss()(decoded_priv, priv.detach()) + torch.nn.MSELoss()(decoded_env, env_obs_batch.detach())
 
-            # Memory loss
-            with torch.no_grad():
-                obs_teacher = torch.cat((obs_batch, latent_priv, env_value), dim=-1)
-                input_a_teacher = self.actor_critic.memory_a(obs_teacher, masks=masks_batch, hidden_states=hid_states_batch[0])
-            estimated_latent_priv, estimated_env_value = self.actor_critic.vae.sample(obs_history_batch.detach())
-            obs_student = torch.cat((obs_batch, estimated_latent_priv, estimated_env_value), dim=-1)
-            input_a_student = self.actor_critic.memory_a(obs_student, masks=masks_batch, hidden_states=hid_states_batch[0])
-            memory_loss = torch.nn.MSELoss()(input_a_student, input_a_teacher.detach())
-            # Actions loss
-            with torch.no_grad():
-                actions_teacher = self.actor_critic.actor(input_a_teacher)
-            actions_student = self.actor_critic.actor(input_a_student)
-            actions_loss = torch.nn.MSELoss()(actions_student, actions_teacher.detach())
-
             ramp_loss = ae_loss# + memory_loss + actions_loss
 
             loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + ramp_loss
