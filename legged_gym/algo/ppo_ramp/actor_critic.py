@@ -212,22 +212,31 @@ class VAE(nn.Module):
             nn.Linear(num_obs_history, 512),
             nn.ELU(),
             nn.Linear(512, 256),
+            nn.ELU(),
+            nn.Linear(256, 128),
         )
 
-        self.priv_mu = nn.Linear(256, 6)
-        self.priv_var = nn.Linear(256, 6)
+        self.priv_mu = nn.Linear(128, 6)
+        self.priv_var = nn.Linear(128, 6)
 
-        self.env_value_mu = nn.Linear(256, 6)
-        self.env_value_var = nn.Linear(256, 6)
+        self.env_value_mu = nn.Linear(128, 6)
+        self.env_value_var = nn.Linear(128, 6)
 
         # Build Decoder
-        decoder_input_dim = 6 + 6
-        self.decoder = nn.Sequential(
-            nn.Linear(decoder_input_dim, 256),
+        self.decoder_p = nn.Sequential(
+            nn.Linear(6, 128),
             nn.ELU(),
-            nn.Linear(256, 512),
+            nn.Linear(128, 256),
             nn.ELU(),
-            nn.Linear(512, 6),
+            nn.Linear(256, 6),
+        )
+
+        self.decoder_e = nn.Sequential(
+            nn.Linear(6, 128),
+            nn.ELU(),
+            nn.Linear(128, 256),
+            nn.ELU(),
+            nn.Linear(256, 10),
         )
 
     def encode(self, obs_history):
@@ -239,9 +248,9 @@ class VAE(nn.Module):
         return [priv_mu, priv_var, env_value_mu, env_value_var]
 
     def decode(self, priv, env_value):
-        input = torch.cat([priv, env_value], dim=-1)
-        output = self.decoder(input)
-        return output
+        decoded_priv = self.decoder_p(priv)
+        decoded_env = self.decoder_e(env_value)
+        return decoded_priv, decoded_env
 
     def forward(self, obs_history):
         priv_mu, priv_var, env_value_mu, env_value_var = self.encode(obs_history)
@@ -254,17 +263,24 @@ class VAE(nn.Module):
         eps = torch.randn_like(std)
         return eps * std + mu
 
-    def loss_fn(self, obs_history, ref_priv, ref_env, kld_weight=1.0):
+    def loss_fn(self, obs_history, ref_priv, ref_env, priv, env, kld_weight=0.01):
         estimation, latent_params = self.forward(obs_history)
-        priv, env_value = estimation
+        est_priv, est_env = estimation
         priv_mu, priv_var, env_value_mu, env_value_var = latent_params
-        recons = self.decode(priv, env_value)
-        recons_loss = torch.nn.MSELoss()(recons, ref_env)
-        priv_loss = torch.nn.MSELoss()(priv, ref_priv)
+        # supervised loss
+        priv_loss = torch.nn.MSELoss()(est_priv, ref_priv)
+        env_value_loss = torch.nn.MSELoss()(est_env, ref_env)
+        supervised_loss = priv_loss + env_value_loss
+        # recon loss
+        priv_recons, env_recons = self.decode(est_priv, est_env)
+        priv_recon_loss = torch.nn.MSELoss()(priv_recons, priv)
+        env_recons_loss = torch.nn.MSELoss()(env_recons, env)
+        recons_loss = priv_recon_loss + env_recons_loss
+        # kl loss
         kld_priv_loss = -0.5 * torch.sum(1 + priv_var - priv_mu ** 2 - priv_var.exp(), dim=-1)
         kld_env_loss = -0.5 * torch.sum(1 + env_value_var - env_value_mu ** 2 - env_value_var.exp(), dim=-1)
         kld_loss = 0.5 * (kld_env_loss + kld_priv_loss)
-        total_loss = recons_loss + priv_loss + kld_weight * kld_loss
+        total_loss = supervised_loss + recons_loss + kld_weight * kld_loss
         return total_loss
 
     def sample(self, obs_history):

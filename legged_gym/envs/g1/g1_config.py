@@ -164,7 +164,7 @@ class g1Cfg(LeggedRobotCfg):
             ankle_pos = 0.1
             feet_contact = 0.3
             feet_air_time = -3.0
-            feet_height = -3.0
+            feet_height = -5.0
             contact_no_vel = -0.1
             contact_forces = -0.003
 
@@ -229,7 +229,7 @@ class g1CfgPPO(LeggedRobotCfgPPO):
         policy_class_name = 'ActorCritic'    # ActorCritic,  ActorCriticRecurrent,  ActorCriticPIA
         algorithm_class_name = 'PPO'
         num_steps_per_env = 25  # per iteration
-        max_iterations = 30000  # number of policy updates
+        max_iterations = 10000  # number of policy updates
 
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.
