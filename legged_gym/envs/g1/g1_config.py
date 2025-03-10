@@ -9,7 +9,7 @@ class g1Cfg(LeggedRobotCfg):
 
         num_single_obs = 46
         single_num_privileged_obs = 52
-        num_env_obs = 1 + 9
+        num_env_obs = 116
         num_observations = int(frame_stack * num_single_obs)
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)
@@ -31,13 +31,13 @@ class g1Cfg(LeggedRobotCfg):
         flip_visual_attachments = False
 
     class terrain(LeggedRobotCfg.terrain):
-        # mesh_type = 'plane'
-        # curriculum = False
-        # measure_heights = False
+        mesh_type = 'plane'
+        curriculum = False
+        measure_heights = False
 
-        mesh_type = 'trimesh'
-        curriculum = True
-        measure_heights = True
+        # mesh_type = 'trimesh'
+        # curriculum = True
+        # measure_heights = True
 
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
         terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
@@ -160,23 +160,23 @@ class g1Cfg(LeggedRobotCfg):
 
         class scales:
             # feet pos
-            hip_pos = 0.2
-            ankle_pos = 0.1
-            feet_contact = 0.3
-            feet_air_time = -3.0
+            hip_pos = 0.5
+            ankle_pos = -1.
+            feet_contact = 0.5
+            feet_air_time = -2.0
             feet_height = -5.0
-            contact_no_vel = -0.1
-            contact_forces = -0.003
+            contact_no_vel = -0.3
+            contact_forces = -0.005
 
             # vel tracking
-            tracking_lin_vel = 1.0
-            tracking_ang_vel = 0.5
-            ang_vel_xy = -0.05
-            lin_vel_z = -2.0
+            tracking_lin_vel = 2.0
+            tracking_ang_vel = 1.0
+            ang_vel_xy = -0.1
+            lin_vel_z = -3.0
 
             # base pos
             orientation = -1.
-            base_height = -10.
+            base_height = 0.2
 
             # energy
             action_rate = -0.01
@@ -186,7 +186,7 @@ class g1Cfg(LeggedRobotCfg):
             collision = -1.0
             dof_pos_limits = -5.0
             torque_limits = -1e-2
-            alive = 0.3
+            alive = 0.5
 
     class normalization:
         class obs_scales:
@@ -229,7 +229,7 @@ class g1CfgPPO(LeggedRobotCfgPPO):
         policy_class_name = 'ActorCritic'    # ActorCritic,  ActorCriticRecurrent,  ActorCriticPIA
         algorithm_class_name = 'PPO'
         num_steps_per_env = 25  # per iteration
-        max_iterations = 30000  # number of policy updates
+        max_iterations = 10000  # number of policy updates
 
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.

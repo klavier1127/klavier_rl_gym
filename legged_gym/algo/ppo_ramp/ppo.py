@@ -113,6 +113,7 @@ class PPO:
             critic_obs_batch,
             obs_history_batch,
             env_obs_batch,
+            env_observations_batch,
             actions_batch,
             target_values_batch,
             advantages_batch,
@@ -125,10 +126,10 @@ class PPO:
             dones_batch,
         ) in generator:
 
-            self.actor_critic.act(obs_batch, critic_obs_batch, obs_history_batch, env_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
+            self.actor_critic.act(obs_batch, critic_obs_batch, obs_history_batch, env_observations_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
             actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
             value_batch = self.actor_critic.evaluate(
-                critic_obs_batch, env_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1]
+                critic_obs_batch, env_observations_batch, masks=masks_batch, hidden_states=hid_states_batch[1]
             )
             mu_batch = self.actor_critic.action_mean
             sigma_batch = self.actor_critic.action_std
@@ -169,10 +170,9 @@ class PPO:
             # ae loss
             priv = critic_obs_batch[..., -6:]
             latent_priv, decoded_priv = self.actor_critic.get_priv(critic_obs_batch)
-            env_value, decoded_env = self.actor_critic.get_env_value(env_obs_batch)
-            ae_loss = torch.nn.MSELoss()(decoded_priv, priv.detach()) + torch.nn.MSELoss()(decoded_env, env_obs_batch.detach())
-
-            ramp_loss = ae_loss# + memory_loss + actions_loss
+            latent, decoded_env = self.actor_critic.get_latent(env_observations_batch)
+            ae_loss = torch.nn.MSELoss()(decoded_priv, priv.detach()) + torch.nn.MSELoss()(decoded_env, env_observations_batch.detach())
+            ramp_loss = ae_loss
 
             loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + ramp_loss
 
@@ -187,9 +187,11 @@ class PPO:
             mean_ramp_loss += ramp_loss.item()
 
             # vae loss
-            valid = (dones_batch == 0).squeeze()
-            vae_loss = self.actor_critic.vae.loss_fn(obs_history_batch.detach(), latent_priv.detach(), env_value.detach(), priv.detach(), env_obs_batch.detach())
-            vae_loss = torch.mean(vae_loss[valid])
+            with torch.no_grad():
+                latent, decoded_env = self.actor_critic.get_latent(env_obs_batch)
+            # valid = (dones_batch == 0).squeeze()
+            vae_loss = self.actor_critic.vae.loss_fn(obs_history_batch.detach(), latent_priv.detach(), latent.detach())
+            vae_loss = torch.mean(vae_loss)
             # Gradient step
             self.vae_optimizer.zero_grad()
             vae_loss.backward()

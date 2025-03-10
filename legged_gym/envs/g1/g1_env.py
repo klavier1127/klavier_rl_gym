@@ -106,8 +106,17 @@ class g1Env(LeggedRobot):
     def get_env_observations(self):
         if self.cfg.terrain.measure_heights:
             self.env_obs_buf = torch.cat((
-                self.env_frictions,  # 1
-                self.measured_heights,  # 7 * 7
+                self.privileged_obs_buf,  # 52
+                self.kp_factor,     # 12
+                self.kd_factor,     # 12
+                self.motor_strength,# 12
+                self.motor_offset,  # 12
+                self.base_com,      # 3
+                self.body_mass,     # 1
+                self.rand_push_force[:, :2], # 2
+                self.rand_push_force[:, 2:], # 2
+                self.env_frictions, # 1
+                self.measured_heights,  # 3 * 3
             ), dim=-1)
         return self.env_obs_buf
 
@@ -129,12 +138,7 @@ class g1Env(LeggedRobot):
         return error / 4.
 
     def _reward_ankle_pos(self):
-        error = 0
-        error += self.sqrdexp(5. * (self.dof_pos[:, 4]- self.default_dof_pos[:, 4]))
-        error += self.sqrdexp(5. * (self.dof_pos[:, 5]- self.default_dof_pos[:, 5]))
-        error += self.sqrdexp(5. * (self.dof_pos[:, 10] - self.default_dof_pos[:, 10]))
-        error += self.sqrdexp(5. * (self.dof_pos[:, 11] - self.default_dof_pos[:, 11]))
-        return error / 4.
+        return torch.sum(torch.square(self.dof_pos[:, [4,5,10,11]] - self.default_dof_pos[:, [4,5,10,11]]), dim=-1)
 
     def _reward_feet_contact(self):
         contact_mask = self._get_contact_mask()
@@ -177,4 +181,4 @@ class g1Env(LeggedRobot):
         feet_heights_r = feet_heights[:, 1]
         base_feet_heights =  torch.where(feet_heights_l >= feet_heights_r, feet_heights_r, feet_heights_l)
         base_height = self.root_states[:, 2] - (base_feet_heights - 0.035)
-        return torch.square(base_height - self.cfg.rewards.base_height_target)
+        return torch.exp(-torch.abs(base_height - self.cfg.rewards.base_height_target) * 100)

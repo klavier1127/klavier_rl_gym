@@ -17,7 +17,7 @@ class ActorCritic(nn.Module):
                         rnn_num_layers=1,
                         init_noise_std=1.0,
                         priv_num=6,
-                        env_obs_num=10,
+                        env_obs_num=116,
                         *args,
                         **kwargs):
 
@@ -29,14 +29,13 @@ class ActorCritic(nn.Module):
         self.priv_num = priv_num
         self.env_obs_num = env_obs_num
 
-
         self.ae_p = Autoencoder(priv_num, 6)
-        self.ae_e = Autoencoder(env_obs_num, 6)
+        self.ae_l = Autoencoder(env_obs_num, 64)
         self.vae = VAE(num_obs_history)
-        self.memory_a = Memory(num_actor_obs+12, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
-        self.memory_c = Memory(num_critic_obs+12, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
-        self.actor = Actor(rnn_hidden_size, num_actions, actor_hidden_dims)
-        self.critic = Critic(rnn_hidden_size, critic_hidden_dims)
+        self.memory_a = Memory(num_actor_obs+6, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
+        self.memory_c = Memory(num_critic_obs+6, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
+        self.actor = Actor(rnn_hidden_size+64, num_actions, actor_hidden_dims)
+        self.critic = Critic(rnn_hidden_size+64, critic_hidden_dims)
 
         print(f"Actor RNN: {self.memory_a}")
         print(f"Critic RNN: {self.memory_c}")
@@ -76,34 +75,37 @@ class ActorCritic(nn.Module):
         latent_priv, decoded_priv = self.ae_p(ref_priv)
         return latent_priv, decoded_priv
 
-    def get_env_value(self, env_obs):
-        env_value, decoded_env = self.ae_e(env_obs)
-        return env_value, decoded_env
+    def get_latent(self, env_obs):
+        latent, decoded_latent = self.ae_l(env_obs)
+        return latent, decoded_latent
 
     def act(self, observations, critic_observations, obs_history, env_obs, masks=None, hidden_states=None):
         latent_priv, _ = self.get_priv(critic_observations)
-        env_value, _ = self.get_env_value(env_obs)
+        latent, _ = self.get_latent(env_obs)
         # latent_priv, env_value = self.vae.sample(obs_history)
-        input_ma = torch.cat((observations, latent_priv, env_value), dim=-1)
-        input_a = self.memory_a(input_ma, masks, hidden_states)
-        self.update_distribution(input_a.squeeze(0))
+        input_ma = torch.cat((observations, latent_priv), dim=-1)
+        memory_output = self.memory_a(input_ma, masks, hidden_states)
+        input_a = torch.cat((memory_output.squeeze(0), latent), dim=-1)
+        self.update_distribution(input_a)
         return self.distribution.sample()
 
     def get_actions_log_prob(self, actions):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
     def act_inference(self, observations, critic_observations, obs_history):
-        priv_mu, env_value_mu = self.vae.inference(obs_history)
-        input_ma = torch.cat((observations, priv_mu, env_value_mu), dim=-1)
-        input_a = self.memory_a(input_ma)
-        return self.actor(input_a.squeeze(0))
+        priv_mu, latent_mu = self.vae.inference(obs_history)
+        input_ma = torch.cat((observations, priv_mu), dim=-1)
+        memory_output = self.memory_a(input_ma)
+        input_a = torch.cat((memory_output.squeeze(0), latent_mu), dim=-1)
+        return self.actor(input_a)
 
     def evaluate(self, critic_observations, env_obs, masks=None, hidden_states=None):
         latent_priv, _ = self.get_priv(critic_observations)
-        env_value, _ = self.get_env_value(env_obs)
-        input_mc = torch.cat((critic_observations, latent_priv, env_value), dim=-1)
-        input_c = self.memory_c(input_mc, masks, hidden_states)
-        return self.critic(input_c.squeeze(0))
+        latent, _ = self.get_latent(env_obs)
+        input_mc = torch.cat((critic_observations, latent_priv), dim=-1)
+        memory_output = self.memory_c(input_mc, masks, hidden_states)
+        input_c = torch.cat((memory_output.squeeze(0), latent), dim=-1)
+        return self.critic(input_c)
 
     def get_hidden_states(self):
         return self.memory_a.hidden_states, self.memory_c.hidden_states
@@ -185,14 +187,14 @@ class Autoencoder(nn.Module):
         super(Autoencoder, self).__init__()
 
         self.encoder = nn.Sequential(
-            nn.Linear(input_num, 32),
+            nn.Linear(input_num, 64),
             nn.ELU(),
-            nn.Linear(32, out_put_num),
+            nn.Linear(64, out_put_num),
         )
         self.decoder = nn.Sequential(
-            nn.Linear(out_put_num, 32),
+            nn.Linear(out_put_num, 64),
             nn.ELU(),
-            nn.Linear(32, input_num),
+            nn.Linear(64, input_num),
         )
 
     def forward(self, env_obs):
@@ -219,67 +221,53 @@ class VAE(nn.Module):
         self.priv_mu = nn.Linear(128, 6)
         self.priv_var = nn.Linear(128, 6)
 
-        self.env_value_mu = nn.Linear(128, 6)
-        self.env_value_var = nn.Linear(128, 6)
+        self.latent_mu = nn.Linear(128, 64)
+        self.latent_var = nn.Linear(128, 64)
 
         # Build Decoder
-        self.decoder_p = nn.Sequential(
-            nn.Linear(6, 128),
+        self.decoder = nn.Sequential(
+            nn.Linear(6+64, 128),
             nn.ELU(),
             nn.Linear(128, 256),
             nn.ELU(),
-            nn.Linear(256, 6),
-        )
-
-        self.decoder_e = nn.Sequential(
-            nn.Linear(6, 128),
-            nn.ELU(),
-            nn.Linear(128, 256),
-            nn.ELU(),
-            nn.Linear(256, 10),
+            nn.Linear(256, 64),
         )
 
     def encode(self, obs_history):
         encoded = self.encoder(obs_history)
         priv_mu = self.priv_mu(encoded)
         priv_var = self.priv_var(encoded)
-        env_value_mu = self.env_value_mu(encoded)
-        env_value_var = self.env_value_var(encoded)
-        return [priv_mu, priv_var, env_value_mu, env_value_var]
+        latent_mu = self.latent_mu(encoded)
+        latent_var = self.latent_var(encoded)
+        return [priv_mu, priv_var, latent_mu, latent_var]
 
-    def decode(self, priv, env_value):
-        decoded_priv = self.decoder_p(priv)
-        decoded_env = self.decoder_e(env_value)
-        return decoded_priv, decoded_env
+    def decode(self, priv, latent):
+        input = torch.cat((priv, latent), dim=-1)
+        recons = self.decoder(input)
+        return recons
 
     def forward(self, obs_history):
-        priv_mu, priv_var, env_value_mu, env_value_var = self.encode(obs_history)
+        priv_mu, priv_var, latent_mu, latent_var = self.encode(obs_history)
         priv = self.reparameterize(priv_mu, priv_var)
-        env_value = self.reparameterize(env_value_mu, env_value_var)
-        return [priv, env_value], [priv_mu, priv_var, env_value_mu, env_value_var]
+        latent = self.reparameterize(latent_mu, latent_var)
+        return [priv, latent], [priv_mu, priv_var, latent_mu, latent_var]
 
     def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
         return eps * std + mu
 
-    def loss_fn(self, obs_history, ref_priv, ref_env, priv, env, kld_weight=0.01):
+    def loss_fn(self, obs_history, ref_priv, ref_env, kld_weight=1.0):
         estimation, latent_params = self.forward(obs_history)
-        est_priv, est_env = estimation
-        priv_mu, priv_var, env_value_mu, env_value_var = latent_params
+        est_priv, est_latent = estimation
+        priv_mu, priv_var, latent_mu, latent_var = latent_params
         # supervised loss
-        priv_loss = torch.nn.MSELoss()(est_priv, ref_priv)
-        env_value_loss = torch.nn.MSELoss()(est_env, ref_env)
-        supervised_loss = priv_loss + env_value_loss
+        supervised_loss = torch.nn.MSELoss()(est_priv, ref_priv)
         # recons loss
-        priv_recons, env_recons = self.decode(est_priv, est_env)
-        priv_recon_loss = torch.nn.MSELoss()(priv_recons, priv)
-        env_recons_loss = torch.nn.MSELoss()(env_recons, env)
-        recons_loss = priv_recon_loss + env_recons_loss
+        recons = self.decode(est_priv, est_latent)
+        recons_loss = torch.nn.MSELoss()(recons, ref_env)
         # kl loss
-        kld_priv_loss = -0.5 * torch.sum(1 + priv_var - priv_mu ** 2 - priv_var.exp(), dim=-1)
-        kld_env_loss = -0.5 * torch.sum(1 + env_value_var - env_value_mu ** 2 - env_value_var.exp(), dim=-1)
-        kld_loss = 0.5 * (kld_env_loss + kld_priv_loss)
+        kld_loss = -0.5 * torch.sum(1 + latent_var - latent_mu ** 2 - latent_var.exp(), dim = 1)
         total_loss = supervised_loss + recons_loss + kld_weight * kld_loss
         return total_loss
 
@@ -291,8 +279,8 @@ class VAE(nn.Module):
     # 输出均值（teacher）
     def inference(self, obs_history):
         _, latent_params = self.forward(obs_history)
-        priv_mu, priv_var, env_value_mu, env_value_var = latent_params
-        return [priv_mu, env_value_mu]
+        priv_mu, priv_var, latent_mu, latent_var = latent_params
+        return [priv_mu, latent_mu]
 
 
 

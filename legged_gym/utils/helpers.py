@@ -279,14 +279,13 @@ class PolicyExporterLSTM(torch.nn.Module):
         self.register_buffer(f'cell_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
 
     def forward(self, obs, obs_history):
-        latent, _ = self.vae(obs_history)
-        priv, env_value = latent
-        obs = torch.cat((obs, priv, env_value), dim=-1)
-
+        (priv, latent) = self.vae.inference(obs_history)
+        obs = torch.cat((obs, priv), dim=-1)
         out, (h, c) = self.memory(obs.unsqueeze(0), (self.hidden_state, self.cell_state))
+        input_a = torch.cat((out.squeeze(0), latent), dim=-1)
         self.hidden_state[:] = h
         self.cell_state[:] = c
-        return self.actor(out.squeeze(0))
+        return self.actor(input_a)
 
     @torch.jit.export
     def reset_memory(self):
@@ -341,12 +340,13 @@ class PolicyExporterPIA(torch.nn.Module):
 
     def forward(self, obs, obs_history):
         latent, _ = self.vae(obs_history)
-        priv, env_value = latent
-        obs = torch.cat((obs, priv, env_value), dim=-1)
+        priv, latent = latent
+        obs = torch.cat((obs, priv), dim=-1)
         out, (h, c) = self.memory(obs.unsqueeze(0), (self.hidden_state, self.cell_state))
+        input_a = torch.cat((out.squeeze(0), latent), dim=-1)
         self.hidden_state[:] = h
         self.cell_state[:] = c
-        return self.actor(out.squeeze(0))
+        return self.actor(input_a)
 
     @torch.jit.export
     def reset_memory(self):

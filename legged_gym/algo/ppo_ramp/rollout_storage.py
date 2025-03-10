@@ -178,7 +178,7 @@ class RolloutStorage:
         else:
             padded_critic_obs_trajectories = padded_obs_trajectories
         padded_obs_history_trajectories, trajectory_masks = split_and_pad_trajectories(self.obs_history, self.dones)
-        padded_env_observations_trajectories, trajectory_masks = split_and_pad_trajectories(self.env_observations, self.dones)
+        padded_env_obs_trajectories, trajectory_masks = split_and_pad_trajectories(self.env_observations, self.dones)
         padded_dones_trajectories, trajectory_masks = split_and_pad_trajectories(self.dones, self.dones)
         mini_batch_size = self.num_envs // num_mini_batches
         for ep in range(num_epochs):
@@ -198,8 +198,9 @@ class RolloutStorage:
                 obs_batch = padded_obs_trajectories[:, first_traj:last_traj]
                 critic_obs_batch = padded_critic_obs_trajectories[:, first_traj:last_traj]
                 obs_history_batch = padded_obs_history_trajectories[:, first_traj:last_traj]
-                env_observations_batch = padded_env_observations_trajectories[:, first_traj:last_traj]
+                env_obs_batch = padded_env_obs_trajectories[:, first_traj:last_traj]
                 dones_batch = padded_dones_trajectories[:, first_traj:last_traj]
+                env_observations_batch = self.env_observations[:, start:stop]
                 actions_batch = self.actions[:, start:stop]
                 old_mu_batch = self.mu[:, start:stop]
                 old_sigma_batch = self.sigma[:, start:stop]
@@ -229,7 +230,7 @@ class RolloutStorage:
                 hid_a_batch = hid_a_batch[0] if len(hid_a_batch) == 1 else hid_a_batch
                 hid_c_batch = hid_c_batch[0] if len(hid_c_batch) == 1 else hid_c_batch
 
-                yield obs_batch, critic_obs_batch, obs_history_batch, env_observations_batch, actions_batch, values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (
+                yield obs_batch, critic_obs_batch, obs_history_batch, env_obs_batch, env_observations_batch, actions_batch, values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (
                     hid_a_batch,
                     hid_c_batch,
                 ), masks_batch, dones_batch
