@@ -17,7 +17,7 @@ class ActorCritic(nn.Module):
                         rnn_num_layers=1,
                         init_noise_std=1.0,
                         priv_num=6,
-                        env_obs_num=116,
+                        env_obs_num=62,
                         *args,
                         **kwargs):
 
@@ -30,12 +30,12 @@ class ActorCritic(nn.Module):
         self.env_obs_num = env_obs_num
 
         self.ae_p = Autoencoder(priv_num, 6)
-        self.ae_l = Autoencoder(env_obs_num, 64)
-        self.vae = VAE(num_obs_history)
+        self.ae_l = Autoencoder(env_obs_num, 32)
+        self.vae = VariationalAutoencode(num_obs_history, 6, 32)
         self.memory_a = Memory(num_actor_obs+6, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.memory_c = Memory(num_critic_obs+6, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
-        self.actor = Actor(rnn_hidden_size+64, num_actions, actor_hidden_dims)
-        self.critic = Critic(rnn_hidden_size+64, critic_hidden_dims)
+        self.actor = Actor(rnn_hidden_size+32, num_actions, actor_hidden_dims)
+        self.critic = Critic(rnn_hidden_size+32, critic_hidden_dims)
 
         print(f"Actor RNN: {self.memory_a}")
         print(f"Critic RNN: {self.memory_c}")
@@ -191,6 +191,7 @@ class Autoencoder(nn.Module):
             nn.ELU(),
             nn.Linear(64, out_put_num),
         )
+
         self.decoder = nn.Sequential(
             nn.Linear(out_put_num, 64),
             nn.ELU(),
@@ -204,9 +205,9 @@ class Autoencoder(nn.Module):
 
 
 
-class VAE(nn.Module):
-    def __init__(self, num_obs_history):
-        super(VAE, self).__init__()
+class VariationalAutoencode(nn.Module):
+    def __init__(self, num_obs_history, priv_num, latent_num):
+        super(VariationalAutoencode, self).__init__()
         self.num_obs_history = num_obs_history
 
         # Build Encoder
@@ -218,19 +219,20 @@ class VAE(nn.Module):
             nn.Linear(256, 128),
         )
 
-        self.priv_mu = nn.Linear(128, 6)
-        self.priv_var = nn.Linear(128, 6)
+        self.priv_mu = nn.Linear(128, priv_num)
+        self.priv_var = nn.Linear(128, priv_num)
 
-        self.latent_mu = nn.Linear(128, 64)
-        self.latent_var = nn.Linear(128, 64)
+        self.latent_mu = nn.Linear(128, latent_num)
+        self.latent_var = nn.Linear(128, latent_num)
 
         # Build Decoder
+        decoder_input = priv_num + latent_num
         self.decoder = nn.Sequential(
-            nn.Linear(6+64, 128),
+            nn.Linear(decoder_input, 128),
             nn.ELU(),
             nn.Linear(128, 256),
             nn.ELU(),
-            nn.Linear(256, 64),
+            nn.Linear(256, 32),
         )
 
     def encode(self, obs_history):
@@ -267,7 +269,8 @@ class VAE(nn.Module):
         recons = self.decode(est_priv, est_latent)
         recons_loss = torch.nn.MSELoss()(recons, ref_env)
         # kl loss
-        kld_loss = -0.5 * torch.sum(1 + latent_var - latent_mu ** 2 - latent_var.exp(), dim = 1)
+        kld_loss = -0.5 * torch.sum(1 + latent_var - latent_mu ** 2 - latent_var.exp(), dim=-1)
+        kld_loss = torch.mean(kld_loss)
         total_loss = supervised_loss + recons_loss + kld_weight * kld_loss
         return total_loss
 
@@ -284,11 +287,9 @@ class VAE(nn.Module):
 
 
 
-
-
-class AdversaryNet(nn.Module):
+class Adversary(nn.Module):
     def __init__(self, env_features, hidden_size=32, num_layers=2, epsilon=0.1):
-        super(AdversaryNet, self).__init__()
+        super(Adversary, self).__init__()
         self.epsilon = epsilon
         layers = []
         input_size = env_features

@@ -64,7 +64,7 @@ class g1Env(LeggedRobot):
         q = (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos
         dq = self.dof_vel * self.obs_scales.dof_vel
 
-        self.privileged_obs_buf = torch.cat((
+        self.privileged_obs = torch.cat((
             phase_sin,
             phase_cos,
             self.commands[:, :3] * self.commands_scale,
@@ -79,7 +79,7 @@ class g1Env(LeggedRobot):
             contact_mask,
         ), dim=-1)
 
-        self.obs_buf = torch.cat((
+        self.obs = torch.cat((
             phase_sin,
             phase_cos,
             self.commands[:, :3] * self.commands_scale,
@@ -91,12 +91,12 @@ class g1Env(LeggedRobot):
         ), dim=-1)
 
         if self.add_noise:
-            self.obs_buf = self.obs_buf.clone() + (2 * torch.rand_like(self.obs_buf) -1) * self.noise_scale_vec * self.cfg.noise.noise_level
+            self.obs = self.obs.clone() + (2 * torch.rand_like(self.obs_buf) -1) * self.noise_scale_vec * self.cfg.noise.noise_level
         else:
-            self.obs_buf = self.obs_buf.clone()
+            self.obs = self.obs.clone()
 
-        self.obs_history.append(self.obs_buf)
-        self.critic_history.append(self.privileged_obs_buf)
+        self.obs_history.append(self.obs)
+        self.critic_history.append(self.privileged_obs)
 
         self.obs_buf = torch.cat([self.obs_history[i] for i in range(-self.cfg.env.frame_stack, 0)], dim=1)
         self.privileged_obs_buf = torch.cat([self.critic_history[i] for i in range(self.cfg.env.c_frame_stack)], dim=1)
@@ -104,20 +104,19 @@ class g1Env(LeggedRobot):
 
 
     def get_env_observations(self):
-        if self.cfg.terrain.measure_heights:
-            self.env_obs_buf = torch.cat((
-                self.privileged_obs_buf,  # 52
-                self.kp_factor,     # 12
-                self.kd_factor,     # 12
-                self.motor_strength,# 12
-                self.motor_offset,  # 12
-                self.base_com,      # 3
-                self.body_mass,     # 1
-                self.rand_push_force[:, :2], # 2
-                self.rand_push_force[:, 2:], # 2
-                self.env_frictions, # 1
-                self.measured_heights,  # 3 * 3
-            ), dim=-1)
+        self.env_obs_buf = torch.cat((
+            self.privileged_obs,         # 52
+            # self.kp_factor,              # 12
+            # self.kd_factor,              # 12
+            # self.motor_strehgth,         # 12
+            # self.motor_offset,           # 12
+            self.base_com,               # 3
+            self.body_mass / 30.,        # 1
+            self.rand_push_force[:, :2], # 2
+            self.rand_push_torque,       # 3
+            self.env_frictions,          # 1
+            # self.measured_heights       # 15
+        ), dim=-1)
         return self.env_obs_buf
 
 
@@ -170,11 +169,7 @@ class g1Env(LeggedRobot):
 
 
     ################################# balance ##################################################
-    # def _reward_orientation(self):
-    #     error = torch.exp(-torch.sum(torch.abs(self.base_euler_xyz[:, :2]), dim=1) * 10)
-    #     error += torch.exp(-torch.norm(self.projected_gravity[:, :2], dim=1) * 20)
-    #     return error / 2.
-    #
+
     def _reward_base_height(self):
         feet_heights = self.rigid_state[:, self.feet_indices, 2]
         feet_heights_l = feet_heights[:, 0]

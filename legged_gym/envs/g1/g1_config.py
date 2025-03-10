@@ -9,7 +9,7 @@ class g1Cfg(LeggedRobotCfg):
 
         num_single_obs = 46
         single_num_privileged_obs = 52
-        num_env_obs = 116
+        num_env_obs = 62
         num_observations = int(frame_stack * num_single_obs)
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)
@@ -113,7 +113,7 @@ class g1Cfg(LeggedRobotCfg):
         rd_mass_range = [0.5, 1.5]
         randomize_all_com = False
         rd_com_range = [-0.03, 0.03]
-        randomize_base_com = False
+        randomize_base_com = True
         added_com_range = [-0.10, 0.10]
         randomize_Kp_factor = False
         Kp_factor_range = [0.8, 1.2]

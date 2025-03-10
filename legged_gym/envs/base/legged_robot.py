@@ -315,34 +315,6 @@ class LeggedRobot(BaseTask):
 
         return props
 
-    # def _process_rigid_body_props(self, props, env_id):
-    #     # randomize base mass
-    #     if self.cfg.domain_rand.randomize_base_mass:
-    #         rng = self.cfg.domain_rand.added_mass_range
-    #         added_base_masses = torch_rand_float(rng[0], rng[1], (1,1), device=self.device)
-    #         props[0].mass += added_base_masses
-    #     self.body_mass[env_id] = props[0].mass
-    #
-    #     # randomize mass of all link
-    #     if self.cfg.domain_rand.randomize_all_mass:
-    #         for s in range(len(props)):
-    #             rng = self.cfg.domain_rand.rd_mass_range
-    #             rd_num = torch_rand_float(rng[0], rng[1], (1,1), device=self.device)
-    #             props[s].mass *= rd_num
-    #
-    #     if self.cfg.domain_rand.randomize_all_com:
-    #         for s in range(len(props) - 1):
-    #             rng_com = self.cfg.domain_rand.rd_com_range
-    #             added_all_com = torch_rand_float(rng_com[0], rng_com[1], (1,3), device=self.device)
-    #             props[s].com += gymapi.Vec3(0.5 * added_all_com[0, 0], 0.3 * added_all_com[0, 1], added_all_com[0, 2])
-    #
-    #     if self.cfg.domain_rand.randomize_base_com:
-    #         rng_com = self.cfg.domain_rand.added_com_range
-    #         added_base_com = torch_rand_float(rng_com[0], rng_com[1], (1,3), device=self.device)
-    #         props[0].com += gymapi.Vec3(0.5 * added_base_com[0, 0], 0.3 * added_base_com[0, 1], added_base_com[0, 2])
-    #
-    #     return props
-
     def _process_rigid_body_props(self, props, env_id):
         # randomize base mass
         if self.cfg.domain_rand.randomize_base_mass:

@@ -15,8 +15,6 @@ def smooth_sqr_wave(phase, cycle_time):
     return np.sin(p) / (2*np.sqrt(np.sin(p)**2. + 0.2**2.)) + 1./2.
 
 def get_obs(data):
-    '''Extracts an observation from the mujoco data structure
-    '''
     q = data.qpos[7:]
     dq = data.qvel[6:]
     quat = data.qpos[3:7]
@@ -134,14 +132,9 @@ def run_mujoco(policy, cfg):
 
 if __name__ == '__main__':
     import argparse
-
     parser = argparse.ArgumentParser(description='Deployment script.')
-    # parser.add_argument('--load_model', type=str, required=True,
-    #                     help='Run to load from.')
     parser.add_argument('--terrain', action='store_true', help='terrain or plane')
     args = parser.parse_args()
-
-
     class Sim2simCfg(g1Cfg):
         class sim_config:
             mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/g1/scene.xml'
@@ -152,12 +145,6 @@ if __name__ == '__main__':
             kps = 1 * np.array([100, 100, 100, 150, 40, 40, 100, 100, 100, 150, 40, 40], dtype=np.double)
             kds = np.array([2, 2, 2, 4, 2, 2, 2, 2, 2, 4, 2, 2], dtype=np.double)
             tau_limit = 50000. * np.ones(12, dtype=np.double)
-
-
     model_path = "../logs/g1/exported/policies/policy_lstm.pt"
-    # model_path = "../logs/g1/exported/policies/policy_pia_example_trimesh.pt"
-    # model_path = "../logs/g1/exported/policies/policy_lstm.pt"
-    # model_path = "../logs/g1/exported/policies/policy_gru.pt"
-    # model_path = "../logs/g1/exported/policies/policy_mlp.pt"
     policy = torch.jit.load(model_path)
     run_mujoco(policy, Sim2simCfg())
