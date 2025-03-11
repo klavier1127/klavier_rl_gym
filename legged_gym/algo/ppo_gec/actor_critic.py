@@ -259,19 +259,20 @@ class VariationalAutoencode(nn.Module):
         eps = torch.randn_like(std)
         return eps * std + mu
 
-    def loss_fn(self, obs_history, ref_priv, ref_latent, ref_env, kld_weight=1.0):
+    def loss_fn(self, obs_history, ref_priv, ref_env, kld_weight=1.0):
         estimation, latent_params = self.forward(obs_history)
         est_priv, est_latent = estimation
         priv_mu, priv_var, latent_mu, latent_var = latent_params
         # supervised loss
-        supervised_loss = torch.nn.MSELoss()(est_priv, ref_priv) + torch.nn.MSELoss()(est_latent, ref_latent)
+        supervised_loss = torch.nn.MSELoss()(est_priv, ref_priv)
         # recons loss
         recons = self.decode(est_priv, est_latent)
         recons_loss = torch.nn.MSELoss()(recons, ref_env)
         # kl loss
-        kld_loss = -0.5 * torch.sum(1 + latent_var - latent_mu ** 2 - latent_var.exp(), dim=-1)
-        kld_loss = torch.mean(kld_loss)
-        total_loss = supervised_loss + recons_loss# + kld_weight * kld_loss
+        # priv_kld_loss = -0.5 * torch.sum(1 + priv_var - priv_mu ** 2 - priv_var.exp(), dim=-1).mean()
+        latent_kld_loss = -0.5 * torch.sum(1 + latent_var - latent_mu ** 2 - latent_var.exp(), dim=-1).mean()
+        kld_loss = latent_kld_loss
+        total_loss = supervised_loss + recons_loss + kld_weight * kld_loss
         return total_loss
 
     # 输出采样值（student）
