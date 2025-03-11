@@ -38,7 +38,6 @@ class PPO:
         self.actor_critic.to(self.device)
         self.storage = None  # initialized later
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
-        self.vae_optimizer = optim.Adam(self.actor_critic.vae.parameters(), lr=vae_learning_rate)
         self.transition = RolloutStorage.Transition()
 
         # PPO parameters
@@ -101,8 +100,8 @@ class PPO:
     def update(self):
         mean_value_loss = 0
         mean_surrogate_loss = 0
-        mean_ae_loss = 0
         mean_vae_loss = 0
+        mean_ae_loss = 0
 
         if self.actor_critic.is_recurrent:
             generator = self.storage.reccurent_mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
@@ -165,14 +164,17 @@ class PPO:
             else:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
-            # RAMP Loss
+            # vae loss
+            ref_priv = critic_obs_batch[..., -6:]
+            ref_env = env_obs_batch
+            vae_loss = self.actor_critic.vae_p.loss_fn(ref_priv) + self.actor_critic.vae_l.loss_fn(ref_env)
             # ae loss
-            priv = critic_obs_batch[..., -6:]
-            latent_priv, decoded_priv = self.actor_critic.get_priv(critic_obs_batch)
-            latent, decoded_env = self.actor_critic.get_latent(env_observations_batch)
-            ae_loss = torch.nn.MSELoss()(decoded_priv, priv.detach()) + torch.nn.MSELoss()(decoded_env, env_observations_batch.detach())
+            with torch.no_grad():
+                priv = self.actor_critic.vae_p.inference(ref_priv)
+                latent = self.actor_critic.vae_l.inference(ref_env)
+            ae_loss = self.actor_critic.ae.loss_fn(obs_history_batch, priv, latent, env_obs_batch)
 
-            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + ae_loss
+            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + vae_loss + ae_loss
 
             # Gradient step
             self.optimizer.zero_grad()
@@ -182,16 +184,8 @@ class PPO:
 
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
-            mean_ae_loss += ae_loss.item()
-
-            # vae loss
-            vae_loss = self.actor_critic.vae.loss_fn(obs_history_batch.detach(), latent_priv.detach(), env_obs_batch.detach())
-            # Gradient step
-            self.vae_optimizer.zero_grad()
-            vae_loss.backward()
-            nn.utils.clip_grad_norm_(self.actor_critic.vae.parameters(), self.max_grad_norm)
-            self.vae_optimizer.step()
             mean_vae_loss += vae_loss.item()
+            mean_ae_loss += ae_loss.item()
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates
@@ -200,4 +194,4 @@ class PPO:
         mean_vae_loss /= num_updates
         self.storage.clear()
 
-        return mean_value_loss, mean_surrogate_loss, mean_ae_loss, mean_vae_loss
+        return mean_value_loss, mean_surrogate_loss, mean_vae_loss, mean_ae_loss
