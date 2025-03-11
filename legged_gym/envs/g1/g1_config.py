@@ -229,7 +229,7 @@ class g1CfgPPO(LeggedRobotCfgPPO):
         policy_class_name = 'ActorCritic'    # ActorCritic,  ActorCriticRecurrent,  ActorCriticPIA
         algorithm_class_name = 'PPO'
         num_steps_per_env = 25  # per iteration
-        max_iterations = 30000  # number of policy updates
+        max_iterations = 10000  # number of policy updates
 
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.

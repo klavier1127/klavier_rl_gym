@@ -165,7 +165,6 @@ class PPO:
             else:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
-            # RAMP Loss
             # ae loss
             priv = critic_obs_batch[..., -6:]
             latent_priv, decoded_priv = self.actor_critic.get_priv(critic_obs_batch)
@@ -187,7 +186,7 @@ class PPO:
             # vae loss
             with torch.no_grad():
                 latent, decoded_env = self.actor_critic.get_latent(env_obs_batch)
-            vae_loss = self.actor_critic.vae.loss_fn(obs_history_batch.detach(), latent_priv.detach(), latent.detach())
+            vae_loss = self.actor_critic.vae.loss_fn(obs_history_batch.detach(), latent_priv.detach(), latent.detach(), env_obs_batch.detach())
             # Gradient step
             self.vae_optimizer.zero_grad()
             vae_loss.backward()
