@@ -9,7 +9,7 @@ from .actor_critic import ActorCritic
 from legged_gym.algo.vec_env import VecEnv
 
 
-class RAMPOnPolicyRunner:
+class GECOnPolicyRunner:
 
     def __init__(self,
                  env: VecEnv,

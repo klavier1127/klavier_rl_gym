@@ -203,7 +203,7 @@ class g1Cfg(LeggedRobotCfg):
 class g1CfgPPO(LeggedRobotCfgPPO):
     # OnPolicyRunner  EstOnPolicyRunner  RNNOnPolicyRunner
     # DWLOnPolicyRunner PIAOnPolicyRunner SymOnPolicyRunner
-    runner_class_name = 'RAMPOnPolicyRunner'
+    runner_class_name = 'GECOnPolicyRunner'
 
     class policy:
         # # only for 'OnPolicyRunner', 'OnPolicyRunner' and 'SymOnPolicyRunner':
@@ -211,8 +211,8 @@ class g1CfgPPO(LeggedRobotCfgPPO):
         # critic_hidden_dims = [768, 256, 128]
 
         # only for 'RNNOnPolicyRunner', 'DWLOnPolicyRunner' and 'PIAOnPolicyRunner':
-        actor_hidden_dims = [32]
-        critic_hidden_dims = [32]
+        actor_hidden_dims = [48]
+        critic_hidden_dims = [48]
         rnn_type = 'lstm'
         rnn_hidden_size = 64
         rnn_num_layers = 1
@@ -229,7 +229,7 @@ class g1CfgPPO(LeggedRobotCfgPPO):
         policy_class_name = 'ActorCritic'    # ActorCritic,  ActorCriticRecurrent,  ActorCriticPIA
         algorithm_class_name = 'PPO'
         num_steps_per_env = 25  # per iteration
-        max_iterations = 10000  # number of policy updates
+        max_iterations = 30000  # number of policy updates
 
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.

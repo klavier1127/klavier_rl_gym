@@ -43,7 +43,7 @@ from legged_gym.algo.ppo_pia import PIAOnPolicyRunner
 from legged_gym.algo.ppo_sym import SymOnPolicyRunner
 from legged_gym.algo.ppo_amp import AMPOnPolicyRunner
 from legged_gym.algo.ppo_sil import SILOnPolicyRunner
-from legged_gym.algo.ppo_ramp import RAMPOnPolicyRunner
+from legged_gym.algo.ppo_gec import GECOnPolicyRunner
 
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from .helpers import get_args, update_cfg_from_args, class_to_dict, get_load_path, set_seed, parse_sim_params

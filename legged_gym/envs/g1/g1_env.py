@@ -104,6 +104,7 @@ class g1Env(LeggedRobot):
 
 
     def get_env_observations(self):
+        heights = self.root_states[:, 2].unsqueeze(1) - self.cfg.rewards.base_height_target - self.measured_heights
         self.env_obs_buf = torch.cat((
             self.privileged_obs,         # 52
             # self.kp_factor,              # 12
@@ -115,7 +116,7 @@ class g1Env(LeggedRobot):
             self.rand_push_force[:, :2], # 2
             self.rand_push_torque,       # 3
             self.env_frictions,          # 1
-            # self.measured_heights       # 15
+            # heights,                     # 15
         ), dim=-1)
         return self.env_obs_buf
 
