@@ -198,6 +198,7 @@ class RolloutStorage:
                 critic_obs_batch = padded_critic_obs_trajectories[:, first_traj:last_traj]
                 obs_history_batch = padded_obs_history_trajectories[:, first_traj:last_traj]
                 env_obs_batch = padded_env_obs_trajectories[:, first_traj:last_traj]
+                observations_history_batch = self.obs_history[:, start:stop]
                 env_observations_batch = self.env_observations[:, start:stop]
                 actions_batch = self.actions[:, start:stop]
                 old_mu_batch = self.mu[:, start:stop]
@@ -228,9 +229,11 @@ class RolloutStorage:
                 hid_a_batch = hid_a_batch[0] if len(hid_a_batch) == 1 else hid_a_batch
                 hid_c_batch = hid_c_batch[0] if len(hid_c_batch) == 1 else hid_c_batch
 
-                yield obs_batch, critic_obs_batch, obs_history_batch, env_obs_batch, env_observations_batch, actions_batch, values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (
+                yield (obs_batch, critic_obs_batch, obs_history_batch, env_obs_batch,
+                       observations_history_batch, env_observations_batch, actions_batch, values_batch,
+                       advantages_batch, returns_batch, old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (
                     hid_a_batch,
                     hid_c_batch,
-                ), masks_batch
+                ), masks_batch)
 
                 first_traj = last_traj

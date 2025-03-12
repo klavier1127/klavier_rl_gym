@@ -29,11 +29,11 @@ class ActorCritic(nn.Module):
         self.priv_num = priv_num
         self.env_obs_num = env_obs_num
 
-        self.vae_p = VariationalAutoencoder(priv_num, 6)
-        self.vae_l = VariationalAutoencoder(env_obs_num, 32)
-        self.ae = Autoencoder(num_obs_history, 6, 32)
+        self.ae_p = Autoencoder(priv_num, 6)
+        self.ae_l = Autoencoder(env_obs_num, 32)
+        self.vae = VariationalAutoencoder(num_obs_history, 6, 32)
         self.memory_a = Memory(num_actor_obs+6, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
-        self.memory_c = Memory(num_critic_obs, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
+        self.memory_c = Memory(num_critic_obs+6, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.actor = Actor(rnn_hidden_size+32, num_actions, actor_hidden_dims)
         self.critic = Critic(rnn_hidden_size+32, critic_hidden_dims)
 
@@ -72,14 +72,16 @@ class ActorCritic(nn.Module):
 
     def get_priv(self, critic_obs):
         ref_priv = critic_obs[..., -self.priv_num:]
-        return self.vae_p.sample(ref_priv)
+        latent_priv, decoded_priv = self.ae_p(ref_priv)
+        return latent_priv, decoded_priv
 
     def get_latent(self, env_obs):
-        return self.vae_l.sample(env_obs)
+        latent, decoded_latent = self.ae_l(env_obs)
+        return latent, decoded_latent
 
     def act(self, observations, critic_observations, obs_history, env_obs, masks=None, hidden_states=None):
-        latent_priv = self.get_priv(critic_observations)
-        latent = self.get_latent(env_obs)
+        latent_priv, _ = self.get_priv(critic_observations)
+        latent, _ = self.get_latent(env_obs)
         # latent_priv, env_value = self.vae.sample(obs_history)
         input_ma = torch.cat((observations, latent_priv), dim=-1)
         memory_output = self.memory_a(input_ma, masks, hidden_states)
@@ -91,15 +93,17 @@ class ActorCritic(nn.Module):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
     def act_inference(self, observations, critic_observations, obs_history):
-        priv, latent, _ = self.ae(obs_history)
-        input_ma = torch.cat((observations, priv), dim=-1)
+        priv_mu, latent_mu, final_latent = self.vae.inference(obs_history)
+        input_ma = torch.cat((observations, priv_mu), dim=-1)
         memory_output = self.memory_a(input_ma)
-        input_a = torch.cat((memory_output.squeeze(0), latent), dim=-1)
+        input_a = torch.cat((memory_output.squeeze(0), final_latent), dim=-1)
         return self.actor(input_a)
 
     def evaluate(self, critic_observations, env_obs, masks=None, hidden_states=None):
-        latent = self.vae_l.inference(env_obs)
-        memory_output = self.memory_c(critic_observations, masks, hidden_states)
+        latent_priv, _ = self.get_priv(critic_observations)
+        latent, _ = self.get_latent(env_obs)
+        input_mc = torch.cat((critic_observations, latent_priv), dim=-1)
+        memory_output = self.memory_c(input_mc, masks, hidden_states)
         input_c = torch.cat((memory_output.squeeze(0), latent), dim=-1)
         return self.critic(input_c)
 
@@ -179,119 +183,115 @@ class Memory(torch.nn.Module):
 
 
 class Autoencoder(nn.Module):
-    def __init__(self, obs_history_num, priv_num, latent_num):
+    def __init__(self, input_num, out_put_num):
         super(Autoencoder, self).__init__()
 
         self.encoder = nn.Sequential(
-            nn.Linear(obs_history_num, 512),
-            nn.ELU(),
-            nn.Linear(512, 256),
-            nn.ELU(),
-            nn.Linear(256, 128)
-        )
-
-        self.priv_encoder = nn.Linear(128, priv_num)
-        self.latent_encoder = nn.Linear(128, latent_num)
-
-        self.decoder = nn.Sequential(
-            nn.Linear(priv_num+latent_num, 256),
-            nn.ELU(),
-            nn.Linear(256, 512),
-            nn.ELU(),
-            nn.Linear(512, 62),
-        )
-
-    def encode(self, obs_history):
-        encoded = self.encoder(obs_history)
-        priv = self.priv_encoder(encoded)
-        latent = self.latent_encoder(encoded)
-        return priv, latent
-
-    def decode(self, priv, latent):
-        input = torch.cat((priv, latent), dim=-1)
-        recons = self.decoder(input)
-        return recons
-
-    def forward(self, obs_history):
-        priv, latent = self.encode(obs_history)
-        recons = self.decode(priv, latent)
-        return priv, latent, recons
-
-    def loss_fn(self, obs_history, ref_priv, ref_latent, ref_env):
-        # supervised loss
-        est_priv, est_latent = self.encode(obs_history)
-        priv_loss = torch.nn.MSELoss()(est_priv, ref_priv)
-        latent_loss = torch.nn.MSELoss()(est_latent, ref_latent)
-        supervised_loss = priv_loss + latent_loss
-        # recons loss
-        recons = self.decode(est_priv, est_latent)
-        recons_loss = torch.nn.MSELoss()(recons, ref_env)
-        total_loss = supervised_loss + recons_loss
-        return total_loss
-
-
-
-class VariationalAutoencoder(nn.Module):
-    def __init__(self, input_num, output_num):
-        super(VariationalAutoencoder, self).__init__()
-        # Build Encoder
-        self.encoder = nn.Sequential(
             nn.Linear(input_num, 64),
             nn.ELU(),
-            nn.Linear(64, 32),
+            nn.Linear(64, out_put_num),
         )
 
-        self.latent_mu = nn.Linear(32, output_num)
-        self.latent_var = nn.Linear(32, output_num)
-
-        # Build Decoder
         self.decoder = nn.Sequential(
-            nn.Linear(output_num, 32),
-            nn.ELU(),
-            nn.Linear(32, 64),
+            nn.Linear(out_put_num, 64),
             nn.ELU(),
             nn.Linear(64, input_num),
         )
 
-    def encode(self, input):
-        encoded = self.encoder(input)
+    def forward(self, env_obs):
+        encoded = self.encoder(env_obs)
+        decoded = self.decoder(encoded)
+        return encoded, decoded
+
+
+
+class VariationalAutoencoder(nn.Module):
+    def __init__(self, num_obs_history, priv_num, latent_num):
+        super(VariationalAutoencoder, self).__init__()
+        self.num_obs_history = num_obs_history
+
+        # Build Encoder
+        self.encoder = nn.Sequential(
+            nn.Linear(num_obs_history, 512),
+            nn.ELU(),
+            nn.Linear(512, 256),
+            nn.ELU(),
+            nn.Linear(256, 128),
+        )
+
+        self.priv_mu = nn.Linear(128, priv_num)
+        self.priv_var = nn.Linear(128, priv_num)
+
+        self.latent_mu = nn.Linear(128, latent_num)
+        self.latent_var = nn.Linear(128, latent_num)
+
+        self.latent = nn.Sequential(
+            nn.Linear(priv_num+latent_num, 64),
+            nn.ELU(),
+            nn.Linear(64, latent_num),
+        )
+
+        # Build Decoder
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_num, 128),
+            nn.ELU(),
+            nn.Linear(128, 256),
+            nn.ELU(),
+            nn.Linear(256, 62),
+        )
+
+    def encode(self, obs_history):
+        encoded = self.encoder(obs_history)
+        priv_mu = self.priv_mu(encoded)
+        priv_var = self.priv_var(encoded)
         latent_mu = self.latent_mu(encoded)
         latent_var = self.latent_var(encoded)
-        return latent_mu, latent_var
 
-    def decode(self, encoded):
-        recons = self.decoder(encoded)
+        final_latent_input = torch.cat((priv_mu, latent_mu), dim=-1)
+        final_latent = self.latent(final_latent_input)
+        return [priv_mu, priv_var, latent_mu, latent_var, final_latent]
+
+    def decode(self, env):
+        recons = self.decoder(env)
         return recons
 
-    def forward(self, input):
-        latent_mu, latent_var = self.encode(input)
+    def forward(self, obs_history):
+        priv_mu, priv_var, latent_mu, latent_var, final_latent = self.encode(obs_history)
+        priv = self.reparameterize(priv_mu, priv_var)
         latent = self.reparameterize(latent_mu, latent_var)
-        return latent, latent_mu, latent_var
+        return [priv, latent], [priv_mu, priv_var, latent_mu, latent_var, final_latent]
 
     def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
         return eps * std + mu
 
-    def loss_fn(self, input, kld_weight=1.0):
-        est_latent, est_latent_mu, est_latent_var = self.forward(input)
+    def loss_fn(self, obs_history, ref_priv, ref_latent, ref_env_obs, kld_weight=1.0):
+        estimation, latent_params = self.forward(obs_history)
+        est_priv, est_latent = estimation
+        priv_mu, priv_var, latent_mu, latent_var, final_latent = latent_params
+        # supervised loss
+        supervised_loss = torch.nn.MSELoss()(est_priv, ref_priv) + torch.nn.MSELoss()(final_latent, ref_latent)
         # recons loss
-        recons = self.decode(est_latent)
-        recons_loss = torch.nn.MSELoss()(recons, input)
+        recons = self.decode(final_latent)
+        recons_loss = torch.nn.MSELoss()(recons, ref_env_obs)
         # kl loss
-        kld_loss = -0.5 * torch.sum(1 + est_latent_var - est_latent_mu ** 2 - est_latent_var.exp(), dim=-1).mean()
-        total_loss = recons_loss + kld_weight * kld_loss
+        latent_kld_loss = -0.5 * torch.sum(1 + latent_var - latent_mu ** 2 - latent_var.exp(), dim=-1).mean()
+        kld_loss = latent_kld_loss
+        total_loss = supervised_loss + recons_loss + kld_weight * kld_loss
         return total_loss
 
     # 输出采样值（student）
-    def sample(self, input):
-        latent, _, _ = self.forward(input)
-        return latent
+    def sample(self, obs_history):
+        estimation, _ = self.forward(obs_history)
+        priv, latent = estimation
+        return priv, latent
 
     # 输出均值（teacher）
-    def inference(self, input):
-        _, latent_mu, _ = self.forward(input)
-        return latent_mu
+    def inference(self, obs_history):
+        _, latent_params = self.forward(obs_history)
+        priv_mu, priv_var, latent_mu, latent_var, final_latent = latent_params
+        return priv_mu, latent_mu , final_latent
 
 
 
