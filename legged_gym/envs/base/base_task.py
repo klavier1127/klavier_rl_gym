@@ -32,7 +32,6 @@ class BaseTask():
         self.num_obs = cfg.env.num_observations
         self.num_privileged_obs = cfg.env.num_privileged_obs
         self.num_obs_history = cfg.env.num_obs_history
-        self.num_env_obs = cfg.env.num_env_obs
         self.num_actions = cfg.env.num_actions
 
         # optimization flags for pytorch JIT
@@ -63,7 +62,6 @@ class BaseTask():
                 self.num_envs, self.num_privileged_obs, device=self.device, dtype=torch.float)
         else:
             self.privileged_obs_buf = None
-
         self.extras = {}
 
         # create envs, sim and viewer

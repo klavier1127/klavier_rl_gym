@@ -17,7 +17,7 @@ class cmd:
     vy = 0.0
     dyaw = 0.0
 
-vx, vy, dyaw = 0.0, 0.0, 0.0
+vx, vy, dyaw = 0.5, 0.0, 0.0
 def on_press(key):
     global vx, vy, dyaw
     try:

@@ -203,7 +203,7 @@ class g1Cfg(LeggedRobotCfg):
 class g1CfgPPO(LeggedRobotCfgPPO):
     # OnPolicyRunner  EstOnPolicyRunner  RNNOnPolicyRunner
     # DWLOnPolicyRunner PIAOnPolicyRunner SymOnPolicyRunner
-    runner_class_name = 'GECOnPolicyRunner'
+    runner_class_name = 'RAMPOnPolicyRunner'
 
     class policy:
         # # only for 'OnPolicyRunner', 'OnPolicyRunner' and 'SymOnPolicyRunner':

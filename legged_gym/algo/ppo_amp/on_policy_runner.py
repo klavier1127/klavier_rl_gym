@@ -1,18 +1,14 @@
-import json
 import os
 import time
 import torch
-import wandb
 import statistics
 from collections import deque
-from datetime import datetime
 from .ppo import PPO
 from .actor_critic import ActorCritic
 from legged_gym.algo.vec_env import VecEnv
 from torch.utils.tensorboard import SummaryWriter
 from legged_gym.algo.ppo_amp.amp_discriminator import AMPDiscriminator
-from legged_gym.algo.ppo_amp.datasets.motion_loader_12dof_humanoid import AMPLoader
-# from legged_gym.algo.ppo_amp.datasets.motion_loader_12dof_humanoid import AMPLoader
+from legged_gym.algo.ppo_amp.datasets.motion_loader import AMPLoader
 from legged_gym.algo.utils.utils import Normalizer
 
 
@@ -44,7 +40,6 @@ class AMPOnPolicyRunner:
             train_cfg['runner']['amp_reward_coef'],
             train_cfg['runner']['amp_discr_hidden_dims'], device,
             train_cfg['runner']['amp_task_reward_lerp']).to(self.device)
-
 
         alg_class = eval(self.cfg["algorithm_class_name"])  # PPO
         self.alg: PPO = alg_class(actor_critic, discriminator, amp_data, amp_normalizer, device=self.device, **self.alg_cfg)
@@ -110,7 +105,6 @@ class AMPOnPolicyRunner:
 
                     next_amp_obs = self.env.get_amp_observations()
                     next_amp_obs = next_amp_obs.to(self.device)
-
                     critic_obs = privileged_obs if privileged_obs is not None else obs
                     obs, critic_obs, obs_history, rewards, dones = (
                         obs.to(self.device),
@@ -125,7 +119,7 @@ class AMPOnPolicyRunner:
                     reset_env_ids, terminal_amp_states = infos['reset_env_ids'], infos['terminal_amp_states']
                     next_amp_obs_with_term[reset_env_ids] = terminal_amp_states
 
-                    rewards += self.alg.discriminator.predict_amp_reward(
+                    rewards = self.alg.discriminator.predict_amp_reward(
                         amp_obs, next_amp_obs_with_term, rewards, normalizer=self.alg.amp_normalizer)[0]
                     amp_obs = torch.clone(next_amp_obs)
 

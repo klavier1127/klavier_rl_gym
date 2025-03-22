@@ -214,6 +214,9 @@ def export_policy_as_jit(actor_critic, path):
         if isinstance(rnn, torch.nn.LSTM):
             exporter = PolicyExporterPIA(actor_critic)
             exporter.export(path)
+    elif hasattr(actor_critic, 'vae'):
+        exporter = PolicyExporterGEC(actor_critic)
+        exporter.export(path)
     elif hasattr(actor_critic, 'memory_a'):
         rnn = actor_critic.memory_a.rnn
         if isinstance(rnn, torch.nn.LSTM):
@@ -279,7 +282,7 @@ class PolicyExporterLSTM(torch.nn.Module):
         self.register_buffer(f'cell_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
 
     def forward(self, obs, obs_history):
-        (priv, _, latent) = self.vae.inference(obs_history)
+        (_, priv, latent) = self.vae.inference(obs_history)
         obs = torch.cat((obs, priv), dim=-1)
         out, (h, c) = self.memory(obs.unsqueeze(0), (self.hidden_state, self.cell_state))
         input_a = torch.cat((out.squeeze(0), latent), dim=-1)
@@ -356,6 +359,39 @@ class PolicyExporterPIA(torch.nn.Module):
     def export(self, path):
         os.makedirs(path, exist_ok=True)
         path = os.path.join(path, 'policy_pia.pt')
+        self.to('cpu')
+        traced_script_module = torch.jit.script(self)
+        traced_script_module.save(path)
+
+
+class PolicyExporterGEC(torch.nn.Module):
+    def __init__(self, actor_critic):
+        super().__init__()
+        self.actor = copy.deepcopy(actor_critic.actor)
+        self.is_recurrent = actor_critic.is_recurrent
+        self.memory = copy.deepcopy(actor_critic.memory_a.rnn)
+        self.vae = copy.deepcopy(actor_critic.vae)
+        self.memory.cpu()
+        self.register_buffer(f'hidden_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
+        self.register_buffer(f'cell_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
+
+    def forward(self, obs, obs_history):
+        (_, priv, latent) = self.vae.inference(obs_history)
+        obs = torch.cat((obs, priv), dim=-1)
+        out, (h, c) = self.memory(obs.unsqueeze(0), (self.hidden_state, self.cell_state))
+        input_a = torch.cat((out.squeeze(0), latent), dim=-1)
+        self.hidden_state[:] = h
+        self.cell_state[:] = c
+        return self.actor(input_a)
+
+    @torch.jit.export
+    def reset_memory(self):
+        self.hidden_state[:] = 0.
+        self.cell_state[:] = 0.
+
+    def export(self, path):
+        os.makedirs(path, exist_ok=True)
+        path = os.path.join(path, 'policy_gec.pt')
         self.to('cpu')
         traced_script_module = torch.jit.script(self)
         traced_script_module.save(path)

@@ -108,8 +108,6 @@ class go2AMPEnv(LeggedRobot):
             self.base_lin_vel * self.obs_scales.lin_vel,
             self.root_states[:, 2].unsqueeze(1) - self.cfg.rewards.base_height_target,
             contact_mask,
-            push_robot.unsqueeze(1),
-            self.rew_buf.unsqueeze(1),
         ), dim=-1)
 
         self.obs_buf = torch.cat((

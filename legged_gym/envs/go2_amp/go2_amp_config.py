@@ -13,7 +13,7 @@ class go2AMPCfg(LeggedRobotCfg):
         o_h_frame_stack = 25
 
         num_single_obs = 46
-        single_num_privileged_obs = 56  # + 9
+        single_num_privileged_obs = 54  # + 9
         num_observations = int(frame_stack * num_single_obs)
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)
@@ -101,10 +101,10 @@ class go2AMPCfg(LeggedRobotCfg):
         up_axis = 1  # 0 is y, 1 is z
 
     class domain_rand:
-        push_robots = True
+        push_robots = False
         push_interval_s = 5
-        max_push_vel_xy = 0.5
-        max_push_ang_vel = 0.3
+        max_push_vel_xy = 1.5
+        max_push_ang_vel = 1.0
         dynamic_randomization = 0.02
 
         randomize_commands = True
@@ -112,26 +112,26 @@ class go2AMPCfg(LeggedRobotCfg):
         friction_range = [0.5, 1.5]
         randomize_base_mass = True
         added_mass_range = [-5., 5.]
-        randomize_all_mass = True
+        randomize_all_mass = False
         rd_mass_range = [0.5, 1.5]
-        randomize_all_com = True
+        randomize_all_com = False
         rd_com_range = [-0.03, 0.03]
-        randomize_base_com = True
+        randomize_base_com = False
         added_com_range = [-0.05, 0.05]
-        randomize_Kp_factor = True
+        randomize_Kp_factor = False
         Kp_factor_range = [0.8, 1.2]
-        randomize_Kd_factor = True
+        randomize_Kd_factor = False
         Kd_factor_range = [0.8, 1.2]
-        randomize_motor_strength = True
+        randomize_motor_strength = False
         motor_strength_range = [0.9, 1.1]
-        randomize_motor_offset = True
+        randomize_motor_offset = False
         motor_offset_range = [-0.035, 0.035]
-        randomize_joint_friction = True
+        randomize_joint_friction = False
         joint_friction_range = [0.01, 1.15]
-        randomize_joint_damping = True
+        randomize_joint_damping = False
         joint_damping_range = [0.3, 1.5]
         randomize_joint_armature = True
-        joint_armature_range = [0.01, 0.03]
+        joint_armature_range = [0.01, 0.05]
 
 
     class commands(LeggedRobotCfg.commands):
@@ -168,6 +168,8 @@ class go2AMPCfg(LeggedRobotCfg):
             tracking_ang_vel = 1.   # 0.5
             ang_vel_xy = -0.1    # -0.05
             lin_vel_z = -3.      # -2.
+            # orientation
+            orientation = -1.
             # energy
             action_rate = -0.01      # -0.5
             torques = -1e-4
@@ -212,15 +214,13 @@ class go2AMPCfgPPO(LeggedRobotCfgPPO):
         policy_class_name = 'ActorCritic'    # ActorCritic,  ActorCriticRecurrent,  ActorCriticPIA
         algorithm_class_name = 'PPO'
         num_steps_per_env = 25  # per iteration
-        max_iterations = 30000  # number of policy updates
+        max_iterations = 10000  # number of policy updates
 
-        amp_reward_coef = 0.3
+        amp_reward_coef = 1.0
         amp_motion_files = MOTION_FILES
         amp_num_preload_transitions = 2000000
-        amp_task_reward_lerp = 0.3
+        amp_task_reward_lerp = 0.7
         amp_discr_hidden_dims = [512, 256, 128]
-
-        min_normalized_std = [0.05, 0.02, 0.05] * 4
 
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.

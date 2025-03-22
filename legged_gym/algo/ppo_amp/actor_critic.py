@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.distributions import Normal
 
+
 class ActorCritic(nn.Module):
     def __init__(self,  num_actor_obs,
                         num_critic_obs,
@@ -51,14 +52,12 @@ class ActorCritic(nn.Module):
         self.distribution = None
         # disable args validation for speedup
         Normal.set_default_validate_args = False
-        
 
     @staticmethod
     # not used at the moment
     def init_weights(sequential, scales):
         [torch.nn.init.orthogonal_(module.weight, gain=scales[idx]) for idx, module in
          enumerate(mod for mod in sequential if isinstance(mod, nn.Linear))]
-
 
     def reset(self, dones=None):
         pass

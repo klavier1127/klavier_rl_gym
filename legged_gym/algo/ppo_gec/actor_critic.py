@@ -31,7 +31,7 @@ class ActorCritic(nn.Module):
 
         self.ae_p = Autoencoder(priv_num, 6)
         self.ae_l = Autoencoder(env_obs_num, 32)
-        self.vae = VariationalAutoencoder(num_obs_history, 6, 32)
+        self.vae = VariationalAutoencoder(num_obs_history, 64, 6, 32)
         self.memory_a = Memory(num_actor_obs+6, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.memory_c = Memory(num_critic_obs+6, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.actor = Actor(rnn_hidden_size+32, num_actions, actor_hidden_dims)
@@ -93,10 +93,10 @@ class ActorCritic(nn.Module):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
     def act_inference(self, observations, critic_observations, obs_history):
-        priv_mu, latent_mu, final_latent = self.vae.inference(obs_history)
+        latent_mu, priv_mu, env_mu = self.vae.inference(obs_history)
         input_ma = torch.cat((observations, priv_mu), dim=-1)
         memory_output = self.memory_a(input_ma)
-        input_a = torch.cat((memory_output.squeeze(0), final_latent), dim=-1)
+        input_a = torch.cat((memory_output.squeeze(0), env_mu), dim=-1)
         return self.actor(input_a)
 
     def evaluate(self, critic_observations, env_obs, masks=None, hidden_states=None):
@@ -206,7 +206,7 @@ class Autoencoder(nn.Module):
 
 
 class VariationalAutoencoder(nn.Module):
-    def __init__(self, num_obs_history, priv_num, latent_num):
+    def __init__(self, num_obs_history, latent_num, priv_num, env_num):
         super(VariationalAutoencoder, self).__init__()
         self.num_obs_history = num_obs_history
 
@@ -219,21 +219,18 @@ class VariationalAutoencoder(nn.Module):
             nn.Linear(256, 128),
         )
 
-        self.priv_mu = nn.Linear(128, priv_num)
-        self.priv_var = nn.Linear(128, priv_num)
-
         self.latent_mu = nn.Linear(128, latent_num)
         self.latent_var = nn.Linear(128, latent_num)
 
-        self.latent = nn.Sequential(
-            nn.Linear(priv_num+latent_num, 64),
-            nn.ELU(),
-            nn.Linear(64, latent_num),
-        )
+        self.priv_mu = nn.Linear(128, priv_num)
+        self.priv_var = nn.Linear(128, priv_num)
+
+        self.env_mu = nn.Linear(128, env_num)
+        self.env_var = nn.Linear(128, env_num)
 
         # Build Decoder
         self.decoder = nn.Sequential(
-            nn.Linear(latent_num, 128),
+            nn.Linear(latent_num+priv_num+env_num, 128),
             nn.ELU(),
             nn.Linear(128, 256),
             nn.ELU(),
@@ -242,38 +239,39 @@ class VariationalAutoencoder(nn.Module):
 
     def encode(self, obs_history):
         encoded = self.encoder(obs_history)
-        priv_mu = self.priv_mu(encoded)
-        priv_var = self.priv_var(encoded)
         latent_mu = self.latent_mu(encoded)
         latent_var = self.latent_var(encoded)
+        priv_mu = self.priv_mu(encoded)
+        priv_var = self.priv_var(encoded)
+        env_mu = self.env_mu(encoded)
+        env_var = self.env_var(encoded)
+        return [latent_mu, latent_var, priv_mu, priv_var, env_mu, env_var]
 
-        final_latent_input = torch.cat((priv_mu, latent_mu), dim=-1)
-        final_latent = self.latent(final_latent_input)
-        return [priv_mu, priv_var, latent_mu, latent_var, final_latent]
-
-    def decode(self, env):
-        recons = self.decoder(env)
+    def decode(self, latent, priv, env):
+        input = torch.cat((latent, priv, env), dim=-1)
+        recons = self.decoder(input)
         return recons
 
     def forward(self, obs_history):
-        priv_mu, priv_var, latent_mu, latent_var, final_latent = self.encode(obs_history)
-        priv = self.reparameterize(priv_mu, priv_var)
+        latent_mu, latent_var, priv_mu, priv_var, env_mu, env_var = self.encode(obs_history)
         latent = self.reparameterize(latent_mu, latent_var)
-        return [priv, latent], [priv_mu, priv_var, latent_mu, latent_var, final_latent]
+        priv = self.reparameterize(priv_mu, priv_var)
+        env = self.reparameterize(env_mu, env_var)
+        return [latent, priv, env], [latent_mu, latent_var, priv_mu, priv_var, env_mu, env_var]
 
     def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
         return eps * std + mu
 
-    def loss_fn(self, obs_history, ref_priv, ref_latent, ref_env_obs, kld_weight=1.0):
+    def loss_fn(self, obs_history, ref_priv, ref_env_latent, ref_env_obs, kld_weight=1.0):
         estimation, latent_params = self.forward(obs_history)
-        est_priv, est_latent = estimation
-        priv_mu, priv_var, latent_mu, latent_var, final_latent = latent_params
+        est_latent, est_priv, est_env = estimation
+        latent_mu, latent_var, priv_mu, priv_var, env_mu, env_var = latent_params
         # supervised loss
-        supervised_loss = torch.nn.MSELoss()(est_priv, ref_priv) + torch.nn.MSELoss()(final_latent, ref_latent)
+        supervised_loss = torch.nn.MSELoss()(est_priv, ref_priv) + torch.nn.MSELoss()(est_env, ref_env_latent)
         # recons loss
-        recons = self.decode(final_latent)
+        recons = self.decode(est_latent, est_priv, est_env)
         recons_loss = torch.nn.MSELoss()(recons, ref_env_obs)
         # kl loss
         latent_kld_loss = -0.5 * torch.sum(1 + latent_var - latent_mu ** 2 - latent_var.exp(), dim=-1).mean()
@@ -284,14 +282,14 @@ class VariationalAutoencoder(nn.Module):
     # 输出采样值（student）
     def sample(self, obs_history):
         estimation, _ = self.forward(obs_history)
-        priv, latent = estimation
-        return priv, latent
+        latent, priv, env = estimation
+        return latent, priv, env
 
     # 输出均值（teacher）
     def inference(self, obs_history):
         _, latent_params = self.forward(obs_history)
-        priv_mu, priv_var, latent_mu, latent_var, final_latent = latent_params
-        return priv_mu, latent_mu , final_latent
+        latent_mu, latent_var, priv_mu, priv_var, env_mu, env_var = latent_params
+        return latent_mu, priv_mu, env_mu
 
 
 
