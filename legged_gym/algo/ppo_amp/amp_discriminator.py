@@ -7,13 +7,12 @@ from legged_gym.algo.utils import utils
 
 
 class AMPDiscriminator(nn.Module):
-    def __init__(self, input_dim, amp_reward_coef, hidden_layer_sizes, device, task_reward_lerp=0.0):
+    def __init__(self, input_dim, hidden_layer_sizes, device):
         super(AMPDiscriminator, self).__init__()
 
         self.device = device
         self.input_dim = input_dim
 
-        self.amp_reward_coef = amp_reward_coef
         amp_layers = []
         curr_in_dim = input_dim
         for hidden_dim in hidden_layer_sizes:
@@ -25,8 +24,6 @@ class AMPDiscriminator(nn.Module):
 
         self.trunk.train()
         self.amp_linear.train()
-
-        self.task_reward_lerp = task_reward_lerp
 
     def forward(self, x):
         h = self.trunk(x)
@@ -54,14 +51,10 @@ class AMPDiscriminator(nn.Module):
             if normalizer is not None:
                 state = normalizer.normalize_torch(state, self.device)
                 next_state = normalizer.normalize_torch(next_state, self.device)
-
             d = self.amp_linear(self.trunk(torch.cat([state, next_state], dim=-1)))
-            reward = self.amp_reward_coef * torch.clamp(1 - (1/4) * torch.square(d - 1), min=0)
-            if self.task_reward_lerp > 0:
-                reward = self._lerp_reward(reward, task_reward.unsqueeze(-1))
+            d = torch.sigmoid(d)
+            amp_reward = -torch.log(torch.clamp(1 - d, min=1e-8))
+            reward = task_reward.unsqueeze(-1) + amp_reward
             self.train()
         return reward.squeeze(), d
 
-    def _lerp_reward(self, disc_r, task_r):
-        r = (1.0 - self.task_reward_lerp) * disc_r + self.task_reward_lerp * task_r
-        return r

@@ -357,11 +357,19 @@ class LeggedRobot(BaseTask):
         dt_phase = self.dt / cycle_time
         self.phase = (self.phase + dt_phase) % 1.0
 
+    def update_feet_state(self):
+        self.gym.refresh_rigid_body_state_tensor(self.sim)
+        self.feet_state = self.rigid_state[:, self.feet_indices, :]
+        self.feet_pos = self.feet_state[:, :, :3]
+        self.feet_vel = self.feet_state[:, :, 7:10]
+
     def _post_physics_step_callback(self):
         """ Callback called before computing terminations, rewards, and observations
             Default behaviour: Compute ang vel command based on target and heading, compute measured terrain heights and randomly push robots
         """
         self.update_phase()
+        self.update_feet_state()
+        self.contacts = torch.norm(self.contact_forces[:, self.feet_indices, :3], dim=2) > 1.
         # randomize_commands_per_steps
         if self.cfg.domain_rand.randomize_commands:
             self.commands[:, 0] += 0.01 * (2 * torch.rand_like(self.commands[:, 0]) - 1)
@@ -532,6 +540,7 @@ class LeggedRobot(BaseTask):
         self.feet_contact_filt = torch.zeros(self.num_envs, self.feet_num, device=self.device, dtype=torch.bool)
         self.feet_air_time = torch.zeros(self.num_envs, self.feet_num, dtype=torch.float, device=self.device, requires_grad=False)
         self.phase = torch.zeros((self.num_envs, 1), dtype=torch.float, device=self.device, requires_grad=False)
+        self.feet_phase = torch.zeros((self.num_envs, 2), device=self.device)
         self.base_lin_vel = quat_rotate_inverse(self.base_quat, self.root_states[:, 7:10])
         self.base_ang_vel = quat_rotate_inverse(self.base_quat, self.root_states[:, 10:13])
         self.projected_gravity = quat_rotate_inverse(self.base_quat, self.gravity_vec)
@@ -859,6 +868,21 @@ class LeggedRobot(BaseTask):
 
 
     # ================================================ Rewards ================================================== #
+    ################################# feet pos ##################################################
+    def _reward_feet_height(self):
+        feet_height = self.feet_pos[:, :, 2] - self.cfg.rewards.base_feet_height
+        error = torch.square(feet_height - self.cfg.rewards.target_feet_height) * ~self.contacts
+        return torch.sum(error, dim=1)
+
+    def _reward_feet_air_time(self):
+        contact_filt = torch.logical_or(self.contacts, self.last_contacts)
+        self.last_contacts = self.contacts
+        first_contact = (self.feet_air_time > 0.) * contact_filt
+        self.feet_air_time += self.dt
+        error = torch.sum((self.feet_air_time - self.cfg.rewards.target_air_time) * first_contact, dim=1)
+        self.feet_air_time *= ~contact_filt
+        return torch.square(error)
+
     ################################# balance ##################################################
     def _reward_orientation(self):
         error = torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1)
@@ -866,7 +890,8 @@ class LeggedRobot(BaseTask):
         return error
 
     def _reward_base_height(self):
-        base_height = self.root_states[:, 2]
+        contact_foot = torch.min(self.feet_pos[:, 0, 2], self.feet_pos[:, 1, 2])
+        base_height = self.root_states[:, 2] - (contact_foot - self.cfg.rewards.base_feet_height)
         return torch.square(base_height - self.cfg.rewards.base_height_target)
 
     ###################### vel ####################################################
@@ -889,8 +914,6 @@ class LeggedRobot(BaseTask):
     def _reward_contact_no_vel(self):
         # Penalize contact with no velocity
         contact = torch.norm(self.contact_forces[:, self.feet_indices, :3], dim=2) > 1.
-        self.feet_state = self.rigid_state[:, self.feet_indices, :]
-        self.feet_vel = self.feet_state[:, :, 7:10]
         contact_feet_vel = self.feet_vel * contact.unsqueeze(-1)
         penalize = torch.square(contact_feet_vel[:, :, :3])
         return torch.sum(penalize, dim=(1,2))

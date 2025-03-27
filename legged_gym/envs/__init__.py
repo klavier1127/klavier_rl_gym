@@ -39,14 +39,14 @@ from legged_gym.envs.h1.h1_env import h1Env
 from legged_gym.envs.g1.g1_config import g1Cfg, g1CfgPPO
 from legged_gym.envs.g1.g1_env import g1Env
 
-from legged_gym.envs.g1_amp.g1_amp_config import g1AMPCfg, g1AMPCfgPPO
-from legged_gym.envs.g1_amp.g1_amp_env import g1AMPEnv
-
 from legged_gym.envs.go2.go2_config import go2Cfg, go2CfgPPO
 from legged_gym.envs.go2.go2_env import go2Env
 
 from legged_gym.envs.go2_amp.go2_amp_config import go2AMPCfg, go2AMPCfgPPO
 from legged_gym.envs.go2_amp.go2_amp_env import go2AMPEnv
+
+from legged_gym.envs.a1_amp.a1_amp_config import a1AMPCfg, a1AMPCfgPPO
+from legged_gym.envs.a1_amp.a1_amp_env import a1AMPEnv
 
 from legged_gym.envs.go2w.go2w_config import go2wCfg, go2wCfgPPO
 from legged_gym.envs.go2w.go2w_env import go2wEnv
@@ -59,9 +59,9 @@ from legged_gym.envs.bx.bx_env import bxEnv
 
 task_registry.register( "h1", h1Env, h1Cfg(), h1CfgPPO() )
 task_registry.register( "g1", g1Env, g1Cfg(), g1CfgPPO() )
-task_registry.register( "g1_amp", g1AMPEnv, g1AMPCfg(), g1AMPCfgPPO() )
 task_registry.register( "go2", go2Env, go2Cfg(), go2CfgPPO() )
 task_registry.register( "go2_amp", go2AMPEnv, go2AMPCfg(), go2AMPCfgPPO() )
+task_registry.register( "a1_amp", a1AMPEnv, a1AMPCfg(), a1AMPCfgPPO() )
 task_registry.register( "go2w", go2wEnv, go2wCfg(), go2wCfgPPO() )
 task_registry.register( "bx", bxEnv, bxCfg(), bxCfgPPO() )
 task_registry.register( "xbot", xbotEnv, xbotCfg(), xbotCfgPPO() )

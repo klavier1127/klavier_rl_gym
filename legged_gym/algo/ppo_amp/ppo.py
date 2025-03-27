@@ -121,8 +121,6 @@ class PPO:
         mean_surrogate_loss = 0
         mean_amp_loss = 0
         mean_grad_pen_loss = 0
-        mean_policy_pred = 0
-        mean_expert_pred = 0
 
         generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
 
@@ -199,13 +197,13 @@ class PPO:
                         expert_next_state = self.amp_normalizer.normalize_torch(expert_next_state, self.device)
                 policy_d = self.discriminator(torch.cat([policy_state, policy_next_state], dim=-1))
                 expert_d = self.discriminator(torch.cat([expert_state, expert_next_state], dim=-1))
-                expert_loss = torch.nn.MSELoss()(
+                expert_loss = torch.nn.BCEWithLogitsLoss()(
                     expert_d, torch.ones(expert_d.size(), device=self.device))
-                policy_loss = torch.nn.MSELoss()(
-                    policy_d, -1. * torch.ones(policy_d.size(), device=self.device))
+                policy_loss = torch.nn.BCEWithLogitsLoss()(
+                    policy_d, torch.zeros(policy_d.size(), device=self.device))
                 amp_loss = 0.5 * (expert_loss + policy_loss)
                 grad_pen_loss = self.discriminator.compute_grad_pen(
-                    *sample_amp_expert, lambda_=1)
+                    *sample_amp_expert, lambda_=10)
 
                 loss = amp_loss + grad_pen_loss
 
@@ -217,8 +215,6 @@ class PPO:
 
                 mean_amp_loss += amp_loss.item()
                 mean_grad_pen_loss += grad_pen_loss.item()
-                mean_policy_pred += policy_d.mean().item()
-                mean_expert_pred += expert_d.mean().item()
 
                 if self.amp_normalizer is not None:
                     self.amp_normalizer.update(policy_state.cpu().numpy())
@@ -228,9 +224,6 @@ class PPO:
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
         mean_amp_loss /= num_updates
-        mean_grad_pen_loss /= num_updates
-        mean_policy_pred /= num_updates
-        mean_expert_pred /= num_updates
         self.storage.clear()
 
-        return mean_value_loss, mean_surrogate_loss, mean_amp_loss, mean_grad_pen_loss, mean_policy_pred, mean_expert_pred
+        return mean_value_loss, mean_surrogate_loss, mean_amp_loss

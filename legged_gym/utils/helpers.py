@@ -276,19 +276,15 @@ class PolicyExporterLSTM(torch.nn.Module):
         self.actor = copy.deepcopy(actor_critic.actor)
         self.is_recurrent = actor_critic.is_recurrent
         self.memory = copy.deepcopy(actor_critic.memory_a.rnn)
-        self.vae = copy.deepcopy(actor_critic.vae)
         self.memory.cpu()
         self.register_buffer(f'hidden_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
         self.register_buffer(f'cell_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
 
     def forward(self, obs, obs_history):
-        (_, priv, latent) = self.vae.inference(obs_history)
-        obs = torch.cat((obs, priv), dim=-1)
         out, (h, c) = self.memory(obs.unsqueeze(0), (self.hidden_state, self.cell_state))
-        input_a = torch.cat((out.squeeze(0), latent), dim=-1)
         self.hidden_state[:] = h
         self.cell_state[:] = c
-        return self.actor(input_a)
+        return self.actor(out.squeeze(0))
 
     @torch.jit.export
     def reset_memory(self):

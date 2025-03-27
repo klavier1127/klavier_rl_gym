@@ -42,7 +42,6 @@ from legged_gym.algo.ppo_dwl import DWLOnPolicyRunner
 from legged_gym.algo.ppo_pia import PIAOnPolicyRunner
 from legged_gym.algo.ppo_sym import SymOnPolicyRunner
 from legged_gym.algo.ppo_amp import AMPOnPolicyRunner
-from legged_gym.algo.ppo_sil import SILOnPolicyRunner
 from legged_gym.algo.ppo_gec import GECOnPolicyRunner
 
 from legged_gym import LEGGED_GYM_ROOT_DIR

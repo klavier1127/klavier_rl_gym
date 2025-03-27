@@ -37,9 +37,8 @@ class AMPOnPolicyRunner:
         amp_normalizer = Normalizer(amp_data.observation_dim)
         discriminator = AMPDiscriminator(
             amp_data.observation_dim * 2,
-            train_cfg['runner']['amp_reward_coef'],
-            train_cfg['runner']['amp_discr_hidden_dims'], device,
-            train_cfg['runner']['amp_task_reward_lerp']).to(self.device)
+            train_cfg['runner']['amp_discr_hidden_dims'], device
+        )
 
         alg_class = eval(self.cfg["algorithm_class_name"])  # PPO
         self.alg: PPO = alg_class(actor_critic, discriminator, amp_data, amp_normalizer, device=self.device, **self.alg_cfg)
@@ -148,7 +147,7 @@ class AMPOnPolicyRunner:
                 start = stop
                 self.alg.compute_returns(critic_obs)
 
-            mean_value_loss, mean_surrogate_loss, mean_amp_loss, mean_grad_pen_loss, mean_policy_pred, mean_expert_pred = self.alg.update()
+            mean_value_loss, mean_surrogate_loss, mean_amp_loss = self.alg.update()
             stop = time.time()
             learn_time = stop - start
             if self.log_dir is not None:
@@ -197,7 +196,6 @@ class AMPOnPolicyRunner:
             "Loss/surrogate", locs["mean_surrogate_loss"], locs["it"]
         )
         self.writer.add_scalar('Loss/AMP', locs['mean_amp_loss'], locs['it'])
-        self.writer.add_scalar('Loss/AMP_grad', locs['mean_grad_pen_loss'], locs['it'])
         self.writer.add_scalar("Loss/learning_rate", self.alg.learning_rate, locs["it"])
         self.writer.add_scalar("Policy/mean_noise_std", mean_std.item(), locs["it"])
         self.writer.add_scalar("Perf/total_fps", fps, locs["it"])
@@ -236,9 +234,6 @@ class AMPOnPolicyRunner:
                 f"""{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"""
                 f"""{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"""
                 f"""{'AMP loss:':>{pad}} {locs['mean_amp_loss']:.4f}\n"""
-                f"""{'AMP grad pen loss:':>{pad}} {locs['mean_grad_pen_loss']:.4f}\n"""
-                f"""{'AMP mean policy pred:':>{pad}} {locs['mean_policy_pred']:.4f}\n"""
-                f"""{'AMP mean expert pred:':>{pad}} {locs['mean_expert_pred']:.4f}\n"""
                 f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
             )
             #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
