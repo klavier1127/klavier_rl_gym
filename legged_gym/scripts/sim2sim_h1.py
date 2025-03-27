@@ -170,9 +170,9 @@ if __name__ == '__main__':
             decimation = 20
 
         class robot_config:
-            kps = 1 * np.array([150, 150, 150, 200, 40, 150, 150, 150, 200, 40], dtype=np.double)
+            kps = np.array([150, 150, 150, 200, 40, 150, 150, 150, 200, 40], dtype=np.double)
             kds = np.array([2, 2, 2, 4, 2, 2, 2, 2, 4, 2], dtype=np.double)
-            tau_limit = 10 * np.array([50, 110, 72, 150, 45, 50, 110, 72, 150, 45], dtype=np.double)
+            tau_limit = np.array([50, 110, 72, 150, 45, 50, 110, 72, 150, 45], dtype=np.double)
 
 
     # model_path = "../logs/h1/exported/policies/policy_pia_example.pt"

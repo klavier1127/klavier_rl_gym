@@ -63,8 +63,6 @@ class LeggedRobot(BaseTask):
         self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
         self.render()
         for _ in range(self.cfg.control.decimation):
-            # delay = torch.rand((self.num_envs, 1), device=self.device)
-            # self.actions = torch.where(delay>0.9, self.last_actions, self.actions)
             self.torques = self._compute_torques(self.actions).view(self.torques.shape)
             self.gym.set_dof_actuation_force_tensor(self.sim, gymtorch.unwrap_tensor(self.torques))
             self.gym.simulate(self.sim)
@@ -521,7 +519,7 @@ class LeggedRobot(BaseTask):
         # initialize some data used later on
         self.common_step_counter = 0
         self.extras = {}
-        self.noise_scale_vec = self._get_noise_scale_vec(self.cfg)
+        self.noise_scale_vec = self._get_noise_scale_vec()
         self.gravity_vec = to_torch(get_axis_params(-1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
         self.forward_vec = to_torch([1., 0., 0.], device=self.device).repeat((self.num_envs, 1))
         self.torques = torch.zeros(self.num_envs, self.num_actions, dtype=torch.float, device=self.device, requires_grad=False)
@@ -892,7 +890,7 @@ class LeggedRobot(BaseTask):
     def _reward_base_height(self):
         contact_foot = torch.min(self.feet_pos[:, 0, 2], self.feet_pos[:, 1, 2])
         base_height = self.root_states[:, 2] - (contact_foot - self.cfg.rewards.base_feet_height)
-        return torch.square(base_height - self.cfg.rewards.base_height_target)
+        return torch.abs(base_height - self.cfg.rewards.base_height_target)
 
     ###################### vel ####################################################
     def _reward_tracking_lin_vel(self):
@@ -955,8 +953,7 @@ class LeggedRobot(BaseTask):
 
     def _reward_torque_limits(self):
         # penalize torques too close to the limit
-        return torch.sum(
-            (torch.abs(self.torques) - self.torque_limits * self.cfg.rewards.soft_torque_limit).clip(min=0.), dim=1)
+        return torch.sum((torch.abs(self.torques) - self.torque_limits * self.cfg.rewards.soft_torque_limit).clip(min=0.), dim=1)
 
     def _reward_termination(self):
         # Terminal reward / penalty

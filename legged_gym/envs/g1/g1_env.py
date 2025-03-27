@@ -11,7 +11,7 @@ class g1Env(LeggedRobot):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
 
-    def _get_noise_scale_vec(self, cfg):
+    def _get_noise_scale_vec(self):
         noise_vec = torch.zeros(self.cfg.env.num_single_obs, device=self.device)
         self.add_noise = self.cfg.noise.add_noise
         noise_scales = self.cfg.noise.noise_scales
@@ -51,6 +51,7 @@ class g1Env(LeggedRobot):
             self.base_lin_vel * self.obs_scales.lin_vel,
             (self.root_states[:, 2].unsqueeze(1) - self.cfg.rewards.base_height_target) * 10.,
             self.contacts,
+            self.rew_buf.unsqueeze(1) * 10.,
         ), dim=-1)
 
         self.obs = torch.cat((
@@ -91,7 +92,6 @@ class g1Env(LeggedRobot):
     def _reward_feet_contact(self):
         walk_mask = self._get_walk_mask()
         reward = 1. * (self.contacts == walk_mask)
-        reward = torch.sum(reward, dim=1)
-        return reward
+        return torch.sum(reward, dim=1)
 
 

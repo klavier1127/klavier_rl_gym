@@ -8,7 +8,7 @@ class g1Cfg(LeggedRobotCfg):
         o_h_frame_stack = 25
 
         num_single_obs = 46
-        single_num_privileged_obs = 52
+        single_num_privileged_obs = 53
         num_observations = int(frame_stack * num_single_obs)
         num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)
@@ -147,7 +147,7 @@ class g1Cfg(LeggedRobotCfg):
         soft_dof_pos_limit = 0.9
         soft_dof_vel_limit = 0.9
         soft_torque_limit = 0.8
-        target_feet_height = 0.08 # m
+        target_feet_height = 0.08  # m
         base_feet_height = 0.035
         cycle_time = 0.8 # sec
         target_air_time = 0.4
@@ -176,7 +176,7 @@ class g1Cfg(LeggedRobotCfg):
 
             # base pos
             orientation = -1.
-            base_height = -10.
+            base_height = -1.
 
             # energy
             action_rate = -0.01

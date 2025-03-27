@@ -11,9 +11,8 @@ class h1Env(LeggedRobot):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
 
-    def _get_noise_scale_vec(self, cfg):
-        noise_vec = torch.zeros(
-            self.cfg.env.num_single_obs, device=self.device)
+    def _get_noise_scale_vec(self):
+        noise_vec = torch.zeros(self.cfg.env.num_single_obs, device=self.device)
         self.add_noise = self.cfg.noise.add_noise
         noise_scales = self.cfg.noise.noise_scales
         noise_vec[0: 5] = 0.  # commands
