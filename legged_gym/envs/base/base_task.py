@@ -30,6 +30,7 @@ class BaseTask():
 
         self.num_envs = cfg.env.num_envs
         self.num_obs = cfg.env.num_observations
+        self.num_critic_obs = cfg.env.num_critic_observations
         self.num_privileged_obs = cfg.env.num_privileged_obs
         self.num_obs_history = cfg.env.num_obs_history
         self.num_actions = cfg.env.num_actions
@@ -41,6 +42,8 @@ class BaseTask():
         # allocate buffers
         self.obs_buf = torch.zeros(
             self.num_envs, self.num_obs, device=self.device, dtype=torch.float)
+        self.critic_obs_buf = torch.zeros(
+            self.num_envs, self.num_critic_obs, device=self.device, dtype=torch.float)
         self.obs_history_buf = torch.zeros(
             self.num_envs, self.num_obs_history, device=self.device, dtype=torch.float)
         self.rew_buf = torch.zeros(
@@ -62,6 +65,7 @@ class BaseTask():
                 self.num_envs, self.num_privileged_obs, device=self.device, dtype=torch.float)
         else:
             self.privileged_obs_buf = None
+
         self.extras = {}
 
         # create envs, sim and viewer
@@ -98,10 +102,13 @@ class BaseTask():
     def get_observations(self):
         return self.obs_buf
 
+    def get_critic_observations(self):
+        return self.critic_obs_buf
+
     def get_privileged_observations(self):
         return self.privileged_obs_buf
 
-    def get_obs_history(self):
+    def get_observations_history(self):
         return self.obs_history_buf
 
     def get_rma_observations(self):
@@ -114,9 +121,9 @@ class BaseTask():
     def reset(self):
         """ Reset all robots"""
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
-        obs, privileged_obs, _, _, _ = self.step(torch.zeros(
+        obs, critic_obs, _, _, _ = self.step(torch.zeros(
             self.num_envs, self.num_actions, device=self.device, requires_grad=False))
-        return obs, privileged_obs
+        return obs, critic_obs
 
     def step(self, actions):
         raise NotImplementedError

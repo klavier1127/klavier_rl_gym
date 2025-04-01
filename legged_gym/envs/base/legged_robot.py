@@ -1,18 +1,16 @@
-import os
-import numpy as np
-
 from isaacgym.torch_utils import *
 from isaacgym import gymtorch, gymapi, gymutil
 from collections import deque
-
-import torch
-
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs.base.base_task import BaseTask
 from legged_gym.utils.math import quat_apply_yaw, wrap_to_pi, torch_rand_sqrt_float, get_euler_xyz_tensor
 from legged_gym.utils.helpers import class_to_dict
 from .legged_robot_config import LeggedRobotCfg
 from legged_gym.utils.terrain import Terrain
+import os
+import numpy as np
+import torch
+
 
 
 class LeggedRobot(BaseTask):
@@ -74,17 +72,15 @@ class LeggedRobot(BaseTask):
         # return clipped obs, clipped states (None), rewards, dones and infos
         clip_obs = self.cfg.normalization.clip_observations
         self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
-        self.obs_history_buf = torch.clip(self.obs_history_buf, -clip_obs, clip_obs)
-        if self.privileged_obs_buf is not None:
-            self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
-        return self.obs_buf, self.privileged_obs_buf, self.obs_history_buf, self.rew_buf, self.reset_buf, self.extras
+        self.critic_obs_buf = torch.clip(self.critic_obs_buf, -clip_obs, clip_obs)
+        return self.obs_buf, self.critic_obs_buf, self.rew_buf, self.reset_buf, self.extras
 
     def reset(self):
         """ Reset all robots"""
         self.reset_idx(torch.arange(self.num_envs, device=self.device))
-        obs, privileged_obs, obs_history, _, _, _ = self.step(torch.zeros(
+        obs, critic_obs, _, _, _ = self.step(torch.zeros(
             self.num_envs, self.num_actions, device=self.device, requires_grad=False))
-        return obs, privileged_obs, obs_history
+        return obs, critic_obs
     
     def post_physics_step(self):
         """ check terminations, compute observations and rewards
@@ -577,7 +573,7 @@ class LeggedRobot(BaseTask):
                 self.num_envs, self.cfg.env.num_single_obs, dtype=torch.float, device=self.device))
         for _ in range(self.cfg.env.c_frame_stack):
             self.critic_history.append(torch.zeros(
-                self.num_envs, self.cfg.env.single_num_privileged_obs, dtype=torch.float, device=self.device))
+                self.num_envs, self.cfg.env.num_single_critic_obs, dtype=torch.float, device=self.device))
 
     def _prepare_reward_function(self):
         """ Prepares a list of reward functions, which will be called to compute the total reward.
@@ -868,9 +864,9 @@ class LeggedRobot(BaseTask):
     # ================================================ Rewards ================================================== #
     ################################# feet pos ##################################################
     def _reward_feet_height(self):
-        feet_height = self.feet_pos[:, :, 2] - self.cfg.rewards.base_feet_height
-        error = torch.square(feet_height - self.cfg.rewards.target_feet_height) * ~self.contacts
-        return torch.sum(error, dim=1)
+        contact_foot = torch.min(self.feet_pos[:, 0, 2], self.feet_pos[:, 1, 2])
+        swing_foot = torch.max(self.feet_pos[:, 0, 2], self.feet_pos[:, 1, 2])
+        return torch.square(swing_foot - contact_foot - self.cfg.rewards.target_feet_height)
 
     def _reward_feet_air_time(self):
         contact_filt = torch.logical_or(self.contacts, self.last_contacts)

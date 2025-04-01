@@ -8,9 +8,11 @@ class go2Cfg(LeggedRobotCfg):
         o_h_frame_stack = 25
 
         num_single_obs = 46
-        single_num_privileged_obs = 56# + 9
+        num_single_critic_obs = 54# + 9
+        num_privileged_obs = 8
+        num_env_obs = 15
         num_observations = int(frame_stack * num_single_obs)
-        num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
+        num_critic_observations = int(c_frame_stack * num_single_critic_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)
 
         num_actions = 12
@@ -30,13 +32,13 @@ class go2Cfg(LeggedRobotCfg):
         flip_visual_attachments = True          # Some .obj meshes must be flipped from y-up to z-up
 
     class terrain(LeggedRobotCfg.terrain):
-        mesh_type = 'plane'
-        curriculum = False
-        measure_heights = False
-
-        # mesh_type = 'trimesh'
-        # curriculum = True
+        # mesh_type = 'plane'
+        # curriculum = False
         # measure_heights = False
+
+        mesh_type = 'trimesh'
+        curriculum = True
+        measure_heights = True
 
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
         terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
@@ -102,7 +104,7 @@ class go2Cfg(LeggedRobotCfg):
         rd_mass_range = [0.5, 1.5]
         randomize_all_com = False
         rd_com_range = [-0.03, 0.03]
-        randomize_base_com = True
+        randomize_base_com = False
         added_com_range = [-0.06, 0.06]
         randomize_Kp_factor = False
         Kp_factor_range = [0.8, 1.2]
@@ -116,8 +118,8 @@ class go2Cfg(LeggedRobotCfg):
         joint_friction_range = [0.03, 0.3]
         randomize_joint_damping = False
         joint_damping_range = [0.3, 1.5]
-        randomize_joint_armature = False
-        joint_armature_range = [0.01, 0.05]
+        randomize_joint_armature = True
+        joint_armature_range = [0.01, 0.03]
 
 
     class commands(LeggedRobotCfg.commands):
@@ -150,22 +152,21 @@ class go2Cfg(LeggedRobotCfg):
 
         class scales:
             hip_pos = 0.5
-            feet_contact = 0.3
-            feet_air_time = -3.
+            feet_contact = 0.25
+            feet_air_time = -2.
             feet_height = -5.
-            foot_mirror_up = -0.1
 
             # vel tracking
             tracking_lin_vel = 2.
             tracking_ang_vel = 1.
             ang_vel_xy = -0.1
-            lin_vel_z = -3
+            lin_vel_z = -3.
             # base pos
-            orientation = 1.
-            base_height = 0.2
+            orientation = -1.
+            base_height = -20.
             # energy
             action_rate = -0.01
-            torques = -1e-4
+            torques = -1e-5
             dof_vel = -1e-3
             dof_acc = -2.5e-7
             collision = -1.
@@ -187,33 +188,20 @@ class go2Cfg(LeggedRobotCfg):
 
 class go2CfgPPO(LeggedRobotCfgPPO):
     # OnPolicyRunner  EstOnPolicyRunner  RNNOnPolicyRunner
-    # DWLOnPolicyRunner PIAOnPolicyRunner
-    runner_class_name = 'PIAOnPolicyRunner'
+    # DWLOnPolicyRunner PIAOnPolicyRunner SymOnPolicyRunner
+    runner_class_name = 'GECOnPolicyRunner'
 
     class policy:
-        # # only for 'OnPolicyRunner':
+        # # only for 'OnPolicyRunner', 'OnPolicyRunner' and 'SymOnPolicyRunner':
         # actor_hidden_dims = [512, 256, 128]
         # critic_hidden_dims = [768, 256, 128]
 
-        # # only for 'EstOnPolicyRunner':
-        # actor_hidden_dims = [512, 256, 128]
-        # critic_hidden_dims = [768, 256, 128]
-        # state_estimator_dims = [256, 128, 64]
-
-        # # only for 'RNNOnPolicyRunner' and 'DWLOnPolicyRunner':
-        # actor_hidden_dims = [32]
-        # critic_hidden_dims = [32]
-        # rnn_type = 'lstm'
-        # rnn_hidden_size = 64
-        # rnn_num_layers = 1
-
-        # only for 'PIAOnPolicyRunner':
+        # only for 'RNNOnPolicyRunner', 'DWLOnPolicyRunner' and 'PIAOnPolicyRunner':
         actor_hidden_dims = [32]
         critic_hidden_dims = [32]
         rnn_type = 'lstm'
         rnn_hidden_size = 64
         rnn_num_layers = 1
-        env_factor_num = 10
 
     class algorithm(LeggedRobotCfgPPO.algorithm):
         schedule = 'adaptive'
@@ -222,7 +210,6 @@ class go2CfgPPO(LeggedRobotCfgPPO):
         lam = 0.95
         num_learning_epochs = 5
         num_mini_batches = 4
-        env_factor_num = 10
 
     class runner:
         policy_class_name = 'ActorCritic'    # ActorCritic,  ActorCriticRecurrent,  ActorCriticPIA
@@ -233,7 +220,6 @@ class go2CfgPPO(LeggedRobotCfgPPO):
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.
         experiment_name = 'go2'
-        run_name = ''
         # Load and resume
         resume = False
         load_run = -1  # -1 = last run

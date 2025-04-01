@@ -5,6 +5,7 @@ from torch.distributions import Normal
 class ActorCritic(nn.Module):
     def __init__(self,  num_actor_obs,
                         num_critic_obs,
+                        num_privileged_obs,
                         num_obs_history,
                         num_actions,
                         actor_hidden_dims=[256, 256, 256],

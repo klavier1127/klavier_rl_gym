@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from .actor_critic import ActorCritic
-from .rollout_storage import RolloutStorage
+from legged_gym.algo.rollout_storage import RolloutStorage
 
 
 class PPO:
@@ -48,8 +48,8 @@ class PPO:
         self.max_grad_norm = max_grad_norm
         self.use_clipped_value_loss = use_clipped_value_loss
 
-    def init_storage(self, num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, obs_history_shape, action_shape):
-        self.storage = RolloutStorage(num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, obs_history_shape, action_shape, self.device)
+    def init_storage(self, num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, privileged_obs_shape, obs_history_shape, action_shape):
+        self.storage = RolloutStorage(num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape, privileged_obs_shape, obs_history_shape, action_shape, self.device)
 
     def test_mode(self):
         self.actor_critic.test()
@@ -57,7 +57,7 @@ class PPO:
     def train_mode(self):
         self.actor_critic.train()
 
-    def act(self, obs, critic_obs, obs_history):
+    def act(self, obs, critic_obs, privileged_obs, obs_history):
         # Compute the actions and values
         self.transition.actions = self.actor_critic.act(obs, critic_obs, obs_history).detach()
         self.transition.values = self.actor_critic.evaluate(critic_obs).detach()
@@ -65,9 +65,10 @@ class PPO:
         self.transition.action_mean = self.actor_critic.action_mean.detach()
         self.transition.action_sigma = self.actor_critic.action_std.detach()
         # need to record obs and critic_obs before env.step()
-        self.transition.observations = obs
-        self.transition.critic_observations = critic_obs
-        self.transition.obs_history = obs_history
+        self.transition.observations = obs.detach()
+        self.transition.critic_observations = critic_obs.detach()
+        self.transition.privileged_observations = privileged_obs.detach()
+        self.transition.obs_history = obs_history.detach()
         return self.transition.actions
     
     def process_env_step(self, rewards, dones, infos):
@@ -91,8 +92,10 @@ class PPO:
         mean_surrogate_loss = 0
 
         generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
-        for obs_batch, critic_obs_batch, obs_history_batch, actions_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, \
-            old_mu_batch, old_sigma_batch, hid_states_batch, masks_batch in generator:
+        for (obs_batch, critic_obs_batch, privileged_obs_batch, obs_history_batch, actions_batch,
+             target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch,
+                old_mu_batch, old_sigma_batch, hid_states_batch, masks_batch, dones_batch) in generator:
+
                 self.actor_critic.act(obs_batch, critic_obs_batch, obs_history_batch)
                 actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
                 value_batch = self.actor_critic.evaluate(critic_obs_batch)

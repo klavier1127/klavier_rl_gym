@@ -10,10 +10,6 @@ import torch
 from legged_gym.utils import quat_to_euler
 
 
-def smooth_sqr_wave(phase, cycle_time):
-    p = 2.*np.pi*phase * 1. / cycle_time
-    return np.sin(p) / (2*np.sqrt(np.sin(p)**2. + 0.2**2.)) + 1./2.
-
 def get_obs(data):
     q = data.qpos[7:]
     dq = data.qvel[6:]
@@ -29,7 +25,6 @@ def pd_control(default_dof_pos, target_q, q, kp, target_dq, dq, kd):
 
 vx, vy, dyaw = 0.0, 0.0, 0.0
 def on_press(key):
-    print(key.char)
     global vx, vy, dyaw
     try:
         if key.char == '2': vx += 0.1
@@ -139,12 +134,12 @@ if __name__ == '__main__':
         class sim_config:
             mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/g1/scene.xml'
             sim_duration = 100.0
-            dt = 0.001
-            decimation = 20
+            dt = 0.002
+            decimation = 10
         class robot_config:
             kps = np.array([100, 100, 100, 150, 40, 40, 100, 100, 100, 150, 40, 40], dtype=np.double)
             kds = np.array([2, 2, 2, 4, 2, 2, 2, 2, 2, 4, 2, 2], dtype=np.double)
-            tau_limit = np.array([88, 139, 88, 139, 50, 50, 88, 139, 88, 139, 50, 50], dtype=np.double)
+            tau_limit = 100. * np.ones(12, dtype=np.double)
     model_path = "../logs/g1/exported/policies/policy_lstm.pt"
     policy = torch.jit.load(model_path)
     run_mujoco(policy, Sim2simCfg())

@@ -7,8 +7,8 @@ class RolloutStorage:
         def __init__(self):
             self.observations = None
             self.critic_observations = None
+            self.privileged_observations = None
             self.obs_history = None
-            self.env_observations = None
             self.actions = None
             self.rewards = None
             self.dones = None
@@ -21,25 +21,19 @@ class RolloutStorage:
         def clear(self):
             self.__init__()
 
-    def __init__(self, num_envs, num_transitions_per_env, obs_shape, privileged_obs_shape, obs_history_shape, env_obs_shape, actions_shape, device="cpu"):
+    def __init__(self, num_envs, num_transitions_per_env, obs_shape, critic_obs_shape, privileged_obs_shape, obs_history_shape, actions_shape, device="cpu"):
         self.device = device
-
         self.obs_shape = obs_shape
+        self.critic_obs_shape = critic_obs_shape
         self.privileged_obs_shape = privileged_obs_shape
         self.obs_history_shape = obs_history_shape
-        self.env_obs_shape = env_obs_shape
         self.actions_shape = actions_shape
 
         # Core
         self.observations = torch.zeros(num_transitions_per_env, num_envs, *obs_shape, device=self.device)
-        if privileged_obs_shape[0] is not None:
-            self.privileged_observations = torch.zeros(
-                num_transitions_per_env, num_envs, *privileged_obs_shape, device=self.device
-            )
-        else:
-            self.privileged_observations = None
+        self.critic_observations = torch.zeros(num_transitions_per_env, num_envs, *critic_obs_shape, device=self.device)
+        self.privileged_observations = torch.zeros(num_transitions_per_env, num_envs, *privileged_obs_shape, device=self.device)
         self.obs_history = torch.zeros(num_transitions_per_env, num_envs, *obs_history_shape, device=self.device)
-        self.env_observations = torch.zeros(num_transitions_per_env, num_envs, *env_obs_shape, device=self.device)
         self.rewards = torch.zeros(num_transitions_per_env, num_envs, 1, device=self.device)
         self.actions = torch.zeros(num_transitions_per_env, num_envs, *actions_shape, device=self.device)
         self.dones = torch.zeros(num_transitions_per_env, num_envs, 1, device=self.device).byte()
@@ -65,10 +59,9 @@ class RolloutStorage:
         if self.step >= self.num_transitions_per_env:
             raise AssertionError("Rollout buffer overflow")
         self.observations[self.step].copy_(transition.observations)
-        if self.privileged_observations is not None:
-            self.privileged_observations[self.step].copy_(transition.critic_observations)
+        self.critic_observations[self.step].copy_(transition.critic_observations)
+        self.privileged_observations[self.step].copy_(transition.privileged_observations)
         self.obs_history[self.step].copy_(transition.obs_history)
-        self.env_observations[self.step].copy_(transition.env_observations)
         self.actions[self.step].copy_(transition.actions)
         self.rewards[self.step].copy_(transition.rewards.view(-1, 1))
         self.dones[self.step].copy_(transition.dones.view(-1, 1))
@@ -134,12 +127,9 @@ class RolloutStorage:
         indices = torch.randperm(num_mini_batches * mini_batch_size, requires_grad=False, device=self.device)
 
         observations = self.observations.flatten(0, 1)
-        if self.privileged_observations is not None:
-            critic_observations = self.privileged_observations.flatten(0, 1)
-        else:
-            critic_observations = observations
+        critic_observations = self.critic_observations.flatten(0, 1)
+        privileged_observations = self.privileged_observations.flatten(0, 1)
         obs_history = self.obs_history.flatten(0, 1)
-        env_observations = self.env_observations.flatten(0, 1)
         actions = self.actions.flatten(0, 1)
         values = self.values.flatten(0, 1)
         returns = self.returns.flatten(0, 1)
@@ -147,6 +137,7 @@ class RolloutStorage:
         advantages = self.advantages.flatten(0, 1)
         old_mu = self.mu.flatten(0, 1)
         old_sigma = self.sigma.flatten(0, 1)
+        dones = self.dones.flatten(0, 1)
 
         for epoch in range(num_epochs):
             for i in range(num_mini_batches):
@@ -156,8 +147,8 @@ class RolloutStorage:
 
                 obs_batch = observations[batch_idx]
                 critic_observations_batch = critic_observations[batch_idx]
+                privileged_observations_batch = privileged_observations[batch_idx]
                 obs_history_batch = obs_history[batch_idx]
-                env_observations_batch = env_observations[batch_idx]
                 actions_batch = actions[batch_idx]
                 target_values_batch = values[batch_idx]
                 returns_batch = returns[batch_idx]
@@ -165,20 +156,19 @@ class RolloutStorage:
                 advantages_batch = advantages[batch_idx]
                 old_mu_batch = old_mu[batch_idx]
                 old_sigma_batch = old_sigma[batch_idx]
-                yield obs_batch, critic_observations_batch, obs_history_batch, env_observations_batch, actions_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (
-                    None,
-                    None,
-                ), None
+                dones_batch = dones[batch_idx]
+                yield (obs_batch, critic_observations_batch, privileged_observations_batch, obs_history_batch,
+                       actions_batch, target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch,
+                       old_mu_batch, old_sigma_batch, (None, None, ), None, dones_batch)
 
     # for RNNs only
     def reccurent_mini_batch_generator(self, num_mini_batches, num_epochs=8):
         padded_obs_trajectories, trajectory_masks = split_and_pad_trajectories(self.observations, self.dones)
-        if self.privileged_observations is not None:
-            padded_critic_obs_trajectories, _ = split_and_pad_trajectories(self.privileged_observations, self.dones)
-        else:
-            padded_critic_obs_trajectories = padded_obs_trajectories
-        padded_obs_history_trajectories, trajectory_masks = split_and_pad_trajectories(self.obs_history, self.dones)
-        padded_env_obs_trajectories, trajectory_masks = split_and_pad_trajectories(self.env_observations, self.dones)
+        padded_critic_obs_trajectories, _ = split_and_pad_trajectories(self.critic_observations, self.dones)
+        padded_obs_history_trajectories, _ = split_and_pad_trajectories(self.obs_history, self.dones)
+        padded_privileged_obs_trajectories, _ = split_and_pad_trajectories(self.privileged_observations, self.dones)
+        padded_dones_trajectories, _ = split_and_pad_trajectories(self.dones, self.dones)
+
         mini_batch_size = self.num_envs // num_mini_batches
         for ep in range(num_epochs):
             first_traj = 0
@@ -197,9 +187,9 @@ class RolloutStorage:
                 obs_batch = padded_obs_trajectories[:, first_traj:last_traj]
                 critic_obs_batch = padded_critic_obs_trajectories[:, first_traj:last_traj]
                 obs_history_batch = padded_obs_history_trajectories[:, first_traj:last_traj]
-                env_obs_batch = padded_env_obs_trajectories[:, first_traj:last_traj]
-                observations_history_batch = self.obs_history[:, start:stop]
-                env_observations_batch = self.env_observations[:, start:stop]
+                privileged_obs_batch = padded_privileged_obs_trajectories[:, first_traj:last_traj]
+                # obs_history_batch = self.obs_history[:, start:stop]
+                # privileged_obs_batch = self.privileged_observations[:, start:stop]
                 actions_batch = self.actions[:, start:stop]
                 old_mu_batch = self.mu[:, start:stop]
                 old_sigma_batch = self.sigma[:, start:stop]
@@ -207,6 +197,8 @@ class RolloutStorage:
                 advantages_batch = self.advantages[:, start:stop]
                 values_batch = self.values[:, start:stop]
                 old_actions_log_prob_batch = self.actions_log_prob[:, start:stop]
+                dones_batch = padded_dones_trajectories[:, first_traj:last_traj]
+                # dones_batch = self.dones[:, start:stop]
 
 
                 # reshape to [num_envs, time, num layers, hidden dim] (original shape: [time, num_layers, num_envs, hidden_dim])
@@ -229,11 +221,8 @@ class RolloutStorage:
                 hid_a_batch = hid_a_batch[0] if len(hid_a_batch) == 1 else hid_a_batch
                 hid_c_batch = hid_c_batch[0] if len(hid_c_batch) == 1 else hid_c_batch
 
-                yield (obs_batch, critic_obs_batch, obs_history_batch, env_obs_batch,
-                       observations_history_batch, env_observations_batch, actions_batch, values_batch,
-                       advantages_batch, returns_batch, old_actions_log_prob_batch, old_mu_batch, old_sigma_batch, (
-                    hid_a_batch,
-                    hid_c_batch,
-                ), masks_batch)
+                yield (obs_batch, critic_obs_batch, privileged_obs_batch, obs_history_batch,
+                        actions_batch, values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch,
+                       old_mu_batch, old_sigma_batch, (hid_a_batch, hid_c_batch,), masks_batch, dones_batch)
 
                 first_traj = last_traj

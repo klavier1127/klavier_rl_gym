@@ -7,17 +7,18 @@ from legged_gym.algo.utils import unpad_trajectories
 class ActorCritic(nn.Module):
     is_recurrent = True
     def __init__(self, num_actor_obs,
-                         num_critic_obs,
-                         num_obs_history,
-                         num_actions,
-                         actor_hidden_dims=[256, 256, 256],
-                         critic_hidden_dims=[256, 256, 256],
-                         rnn_type="lstm",
-                         rnn_hidden_size=64,
-                         rnn_num_layers=1,
-                         init_noise_std=1.0,
-                         *args,
-                         **kwargs):
+                        num_critic_obs,
+                        num_privileged_obs,
+                        num_obs_history,
+                        num_actions,
+                        actor_hidden_dims=[256, 256, 256],
+                        critic_hidden_dims=[256, 256, 256],
+                        rnn_type="lstm",
+                        rnn_hidden_size=64,
+                        rnn_num_layers=1,
+                        init_noise_std=1.0,
+                        *args,
+                        **kwargs):
 
         super().__init__(*args, **kwargs)
         if kwargs:
@@ -71,7 +72,7 @@ class ActorCritic(nn.Module):
     def get_actions_log_prob(self, actions):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
-    def act_inference(self, observations, critic_observations, obs_history):
+    def act_inference(self, observations, obs_history):
         input_a = self.memory_a(observations).squeeze(0)
         return self.actor(input_a)
 

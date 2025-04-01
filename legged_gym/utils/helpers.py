@@ -209,12 +209,7 @@ def get_args():
 
 
 def export_policy_as_jit(actor_critic, path):
-    if hasattr(actor_critic, 'estimator'):
-        rnn = actor_critic.memory_a.rnn
-        if isinstance(rnn, torch.nn.LSTM):
-            exporter = PolicyExporterPIA(actor_critic)
-            exporter.export(path)
-    elif hasattr(actor_critic, 'vae'):
+    if hasattr(actor_critic, 'ae'):
         exporter = PolicyExporterGEC(actor_critic)
         exporter.export(path)
     elif hasattr(actor_critic, 'memory_a'):
@@ -227,9 +222,6 @@ def export_policy_as_jit(actor_critic, path):
             exporter.export(path)
         else:
             raise ValueError(f"Unsupported RNN type: {type(rnn)}")
-    elif hasattr(actor_critic, 'state_estimator'):
-        exporter = PolicyExporterStateEstimator(actor_critic)
-        exporter.export(path)
     else:
         exporter = PolicyExporterMLP(actor_critic)
         exporter.export(path)
@@ -250,25 +242,6 @@ class PolicyExporterMLP(torch.nn.Module):
         self.to('cpu')
         traced_script_module = torch.jit.script(self)
         traced_script_module.save(path)
-
-class PolicyExporterStateEstimator(torch.nn.Module):
-    def __init__(self, actor_critic):
-        super().__init__()
-        self.actor = copy.deepcopy(actor_critic.actor)
-        self.state_estimator = copy.deepcopy(actor_critic.state_estimator)
-
-    def forward(self, obs, obs_history):
-        est = self.state_estimator(obs_history)
-        obs = torch.cat((obs, est), dim=-1)
-        return self.actor(obs)
-
-    def export(self, path):
-        os.makedirs(path, exist_ok=True)
-        path = os.path.join(path, 'policy_state_estimator.pt')
-        self.to('cpu')
-        traced_script_module = torch.jit.script(self)
-        traced_script_module.save(path)
-
 
 class PolicyExporterLSTM(torch.nn.Module):
     def __init__(self, actor_critic):
@@ -304,13 +277,10 @@ class PolicyExporterGRU(torch.nn.Module):
         self.actor = copy.deepcopy(actor_critic.actor)
         self.is_recurrent = actor_critic.is_recurrent
         self.memory = copy.deepcopy(actor_critic.memory_a.rnn)
-        # self.state_estimator = copy.deepcopy(actor_critic.estimator)
         self.memory.cpu()
         self.register_buffer('hidden_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
 
     def forward(self, obs, obs_history):
-        # spt = self.state_estimator(obs_history)
-        # obs = torch.cat((obs, spt), dim=-1)
         out, h = self.memory(obs.unsqueeze(0), self.hidden_state)
         self.hidden_state[:] = h
         return self.actor(out.squeeze(0))
@@ -327,58 +297,24 @@ class PolicyExporterGRU(torch.nn.Module):
         traced_script_module.save(path)
 
 
-class PolicyExporterPIA(torch.nn.Module):
-    def __init__(self, actor_critic):
-        super().__init__()
-        self.actor = copy.deepcopy(actor_critic.actor)
-        self.memory = copy.deepcopy(actor_critic.memory_a.rnn)
-        self.vae = copy.deepcopy(actor_critic.vae)
-        self.memory.cpu()
-        self.register_buffer(f'hidden_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
-        self.register_buffer(f'cell_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
-
-    def forward(self, obs, obs_history):
-        latent, _ = self.vae(obs_history)
-        priv, latent = latent
-        obs = torch.cat((obs, priv), dim=-1)
-        out, (h, c) = self.memory(obs.unsqueeze(0), (self.hidden_state, self.cell_state))
-        input_a = torch.cat((out.squeeze(0), latent), dim=-1)
-        self.hidden_state[:] = h
-        self.cell_state[:] = c
-        return self.actor(input_a)
-
-    @torch.jit.export
-    def reset_memory(self):
-        self.hidden_state[:] = 0.
-        self.cell_state[:] = 0.
-
-    def export(self, path):
-        os.makedirs(path, exist_ok=True)
-        path = os.path.join(path, 'policy_pia.pt')
-        self.to('cpu')
-        traced_script_module = torch.jit.script(self)
-        traced_script_module.save(path)
-
-
 class PolicyExporterGEC(torch.nn.Module):
     def __init__(self, actor_critic):
         super().__init__()
         self.actor = copy.deepcopy(actor_critic.actor)
         self.is_recurrent = actor_critic.is_recurrent
         self.memory = copy.deepcopy(actor_critic.memory_a.rnn)
-        self.vae = copy.deepcopy(actor_critic.vae)
+        self.estimator = copy.deepcopy(actor_critic.estimator)
         self.memory.cpu()
         self.register_buffer(f'hidden_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
         self.register_buffer(f'cell_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
 
     def forward(self, obs, obs_history):
-        (_, priv, latent) = self.vae.inference(obs_history)
-        obs = torch.cat((obs, priv), dim=-1)
-        out, (h, c) = self.memory(obs.unsqueeze(0), (self.hidden_state, self.cell_state))
-        input_a = torch.cat((out.squeeze(0), latent), dim=-1)
+        latent = self.estimator(obs_history)
+        input_m = torch.cat((obs, latent), dim=-1)
+        out, (h, c) = self.memory(input_m.unsqueeze(0), (self.hidden_state, self.cell_state))
         self.hidden_state[:] = h
         self.cell_state[:] = c
-        return self.actor(input_a)
+        return self.actor(out)
 
     @torch.jit.export
     def reset_memory(self):

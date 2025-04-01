@@ -173,7 +173,7 @@ if __name__ == '__main__':
 
 
     # model_path = "../logs/go2/exported/policies/policy_pia_example.pt"
-    model_path = "../logs/go2/exported/policies/policy_pia.pt"
+    model_path = "../logs/go2/exported/policies/policy_gec.pt"
     # model_path = "../logs/go2/exported/policies/policy_gru.pt"
     # model_path = "../logs/go2/exported/policies/policy_lstm.pt"
     policy = torch.jit.load(model_path)

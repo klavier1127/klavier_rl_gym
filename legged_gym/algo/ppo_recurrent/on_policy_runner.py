@@ -30,7 +30,8 @@ class RNNOnPolicyRunner:
             num_critic_obs = self.env.num_obs
         actor_critic_class = eval(self.cfg["policy_class_name"])  # ActorCritic
         actor_critic: ActorCritic = actor_critic_class(self.env.num_obs,
-                                                       num_critic_obs,
+                                                       self.env.num_critic_obs,
+                                                       self.env.num_privileged_obs,
                                                        self.env.num_obs_history,
                                                        self.env.num_actions,
                                                        **self.policy_cfg).to(self.device)
@@ -41,7 +42,8 @@ class RNNOnPolicyRunner:
 
         # init storage and model
         self.alg.init_storage(self.env.num_envs, self.num_steps_per_env, [self.env.num_obs],
-                              [self.env.num_privileged_obs], [self.env.num_obs_history], [self.env.num_actions])
+                              [self.env.num_critic_obs], [self.env.num_privileged_obs],
+                              [self.env.num_obs_history], [self.env.num_actions])
 
         # Log
         self.log_dir = log_dir
@@ -50,7 +52,7 @@ class RNNOnPolicyRunner:
         self.tot_time = 0
         self.current_learning_iteration = 0
 
-        _, _, _ = self.env.reset()
+        _, _ = self.env.reset()
 
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
         # initialize writer
@@ -60,10 +62,10 @@ class RNNOnPolicyRunner:
             self.env.episode_length_buf = torch.randint_like(self.env.episode_length_buf,
                                                              high=int(self.env.max_episode_length))
         obs = self.env.get_observations()
+        critic_obs = self.env.get_critic_observations()
         privileged_obs = self.env.get_privileged_observations()
-        critic_obs = privileged_obs if privileged_obs is not None else obs
-        obs_history = self.env.get_obs_history()
-        obs, critic_obs, obs_history = obs.to(self.device), critic_obs.to(self.device), obs_history.to(self.device)
+        obs_history = self.env.get_observations_history()
+        obs, critic_obs, privileged_obs, obs_history = obs.to(self.device), critic_obs.to(self.device), privileged_obs.to(self.device), obs_history.to(self.device)
         self.alg.actor_critic.train()  # switch to train mode (for dropout for example)
 
         ep_infos = []
@@ -78,10 +80,10 @@ class RNNOnPolicyRunner:
             # Rollout
             with torch.inference_mode():
                 for i in range(self.num_steps_per_env):
-                    actions = self.alg.act(obs, critic_obs, obs_history)
-                    obs, privileged_obs, obs_history, rewards, dones, infos = self.env.step(actions)
-                    critic_obs = privileged_obs if privileged_obs is not None else obs
-                    obs, critic_obs, obs_history, rewards, dones = obs.to(self.device), critic_obs.to(self.device), obs_history.to(self.device), rewards.to(self.device), dones.to(self.device)
+                    actions = self.alg.act(obs, critic_obs, privileged_obs, obs_history)
+                    obs, critic_obs, rewards, dones, infos = self.env.step(actions)
+                    obs, critic_obs, rewards, dones = obs.to(self.device), critic_obs.to(self.device), rewards.to(self.device), dones.to(self.device)
+                    privileged_obs, obs_history = infos['privileged_obs'], infos['obs_history']
                     self.alg.process_env_step(rewards, dones, infos)
 
                     if self.log_dir is not None:

@@ -21,8 +21,8 @@ class LeggedRobotCfg(BaseConfig):
         restitution = 0.
         # rough terrain only:
         measure_heights = True
-        measured_points_x = [-0.2, -0.1, 0., 0.1, 0.2] # 1mx1.6m rectangle (without center line)
-        measured_points_y = [-0.1, 0., 0.1]
+        measured_points_x = [-0.1, 0., 0.1] # 1m x 1.6m rectangle (without center line)
+        measured_points_y = [0.]
         selected = False # select a unique terrain type and pass all arguments
         terrain_kwargs = None # Dict of arguments for selected terrain
         max_init_terrain_level = 5 # starting curriculum state
@@ -199,7 +199,6 @@ class LeggedRobotCfgPPO(BaseConfig):
         # logging
         save_interval = 100 # check for potential saves every this many iterations
         experiment_name = 'test'
-        run_name = ''
         # load and resume
         resume = False
         load_run = -1 # -1 = last run
