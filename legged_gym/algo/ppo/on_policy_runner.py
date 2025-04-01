@@ -26,22 +26,21 @@ class OnPolicyRunner:
         else:
             num_critic_obs = self.env.num_obs
         actor_critic_class = eval(self.cfg["policy_class_name"])  # ActorCritic
-        actor_critic: ActorCritic = actor_critic_class(
-            self.env.num_obs, num_critic_obs, self.env.num_obs_history, self.env.num_actions, **self.policy_cfg
-        ).to(self.device)
+        actor_critic: ActorCritic = actor_critic_class(self.env.num_obs,
+                                                       self.env.num_critic_obs,
+                                                       self.env.num_privileged_obs,
+                                                       self.env.num_obs_history,
+                                                       self.env.num_actions,
+                                                       **self.policy_cfg).to(self.device)
         alg_class = eval(self.cfg["algorithm_class_name"])  # PPO
         self.alg: PPO = alg_class(actor_critic, device=self.device, **self.alg_cfg)
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
 
-        self.alg.init_storage(
-            self.env.num_envs,
-            self.num_steps_per_env,
-            [self.env.num_obs],
-            [self.env.num_privileged_obs],
-            [self.env.num_obs_history],
-            [self.env.num_actions],
-        )
+        # init storage and model
+        self.alg.init_storage(self.env.num_envs, self.num_steps_per_env, [self.env.num_obs],
+                              [self.env.num_critic_obs], [self.env.num_privileged_obs],
+                              [self.env.num_obs_history], [self.env.num_actions])
 
         # Log
         self.log_dir = log_dir
@@ -50,32 +49,27 @@ class OnPolicyRunner:
         self.tot_time = 0
         self.current_learning_iteration = 0
 
-        _, _, _ = self.env.reset()
+        _, _ = self.env.reset()
 
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
         # initialize writer
         if self.log_dir is not None and self.writer is None:
             self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
         if init_at_random_ep_len:
-            self.env.episode_length_buf = torch.randint_like(
-                self.env.episode_length_buf, high=int(self.env.max_episode_length)
-            )
+            self.env.episode_length_buf = torch.randint_like(self.env.episode_length_buf,
+                                                             high=int(self.env.max_episode_length))
         obs = self.env.get_observations()
+        critic_obs = self.env.get_critic_observations()
         privileged_obs = self.env.get_privileged_observations()
-        obs_history = self.env.get_obs_history()
-        critic_obs = privileged_obs if privileged_obs is not None else obs
-        obs, critic_obs, obs_history = obs.to(self.device), critic_obs.to(self.device), obs_history.to(self.device)
+        obs_history = self.env.get_observations_history()
+        obs, critic_obs, privileged_obs, obs_history = obs.to(self.device), critic_obs.to(self.device), privileged_obs.to(self.device), obs_history.to(self.device)
         self.alg.actor_critic.train()  # switch to train mode (for dropout for example)
 
         ep_infos = []
         rewbuffer = deque(maxlen=100)
         lenbuffer = deque(maxlen=100)
-        cur_reward_sum = torch.zeros(
-            self.env.num_envs, dtype=torch.float, device=self.device
-        )
-        cur_episode_length = torch.zeros(
-            self.env.num_envs, dtype=torch.float, device=self.device
-        )
+        cur_reward_sum = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
+        cur_episode_length = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
 
         tot_iter = self.current_learning_iteration + num_learning_iterations
         for it in range(self.current_learning_iteration, tot_iter):
@@ -83,16 +77,10 @@ class OnPolicyRunner:
             # Rollout
             with torch.inference_mode():
                 for i in range(self.num_steps_per_env):
-                    actions = self.alg.act(obs, critic_obs, obs_history)
-                    obs, privileged_obs, obs_history, rewards, dones, infos = self.env.step(actions)
-                    critic_obs = privileged_obs if privileged_obs is not None else obs
-                    obs, critic_obs, obs_history, rewards, dones = (
-                        obs.to(self.device),
-                        critic_obs.to(self.device),
-                        obs_history.to(self.device),
-                        rewards.to(self.device),
-                        dones.to(self.device),
-                    )
+                    actions = self.alg.act(obs, critic_obs, privileged_obs, obs_history)
+                    obs, critic_obs, rewards, dones, infos = self.env.step(actions)
+                    obs, critic_obs, rewards, dones = obs.to(self.device), critic_obs.to(self.device), rewards.to(self.device), dones.to(self.device)
+                    privileged_obs, obs_history = infos['privileged_obs'], infos['obs_history']
                     self.alg.process_env_step(rewards, dones, infos)
 
                     if self.log_dir is not None:
@@ -102,18 +90,13 @@ class OnPolicyRunner:
                         cur_reward_sum += rewards
                         cur_episode_length += 1
                         new_ids = (dones > 0).nonzero(as_tuple=False)
-                        rewbuffer.extend(
-                            cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist()
-                        )
-                        lenbuffer.extend(
-                            cur_episode_length[new_ids][:, 0].cpu().numpy().tolist()
-                        )
+                        rewbuffer.extend(cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist())
+                        lenbuffer.extend(cur_episode_length[new_ids][:, 0].cpu().numpy().tolist())
                         cur_reward_sum[new_ids] = 0
                         cur_episode_length[new_ids] = 0
 
                 stop = time.time()
                 collection_time = stop - start
-
                 # Learning step
                 start = stop
                 self.alg.compute_returns(critic_obs)

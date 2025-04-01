@@ -3,14 +3,15 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 
 class g1Cfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
-        frame_stack = 1
-        c_frame_stack = 1
+        frame_stack = 15
+        c_frame_stack = 15
         o_h_frame_stack = 25
 
         num_single_obs = 46
-        single_num_privileged_obs = 53
+        num_single_critic_obs = 46 + 8# + 3
+        num_privileged_obs = 8# + 3
         num_observations = int(frame_stack * num_single_obs)
-        num_privileged_obs = int(c_frame_stack * single_num_privileged_obs)
+        num_critic_observations = int(c_frame_stack * num_single_critic_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)
 
         num_actions = 12
@@ -98,9 +99,9 @@ class g1Cfg(LeggedRobotCfg):
 
     class domain_rand:
         push_robots = True
-        push_interval_s = 5
-        max_push_vel_xy = 1.5
-        max_push_ang_vel = 1.0
+        push_interval_s = 10
+        max_push_vel_xy = 0.5
+        max_push_ang_vel = 0.3
         dynamic_randomization = 0.02
 
         randomize_commands = True
@@ -112,7 +113,7 @@ class g1Cfg(LeggedRobotCfg):
         rd_mass_range = [0.5, 1.5]
         randomize_all_com = False
         rd_com_range = [-0.03, 0.03]
-        randomize_base_com = True
+        randomize_base_com = False
         added_com_range = [-0.10, 0.10]
         randomize_Kp_factor = False
         Kp_factor_range = [0.8, 1.2]
@@ -127,7 +128,7 @@ class g1Cfg(LeggedRobotCfg):
         randomize_joint_damping = False
         joint_damping_range = [0.3, 1.5]
         randomize_joint_armature = True
-        joint_armature_range = [0.01, 0.05]
+        joint_armature_range = [0.01, 0.03]
 
 
     class commands(LeggedRobotCfg.commands):
@@ -143,12 +144,12 @@ class g1Cfg(LeggedRobotCfg):
             heading = [-1.57, 1.57]
 
     class rewards:
-        base_height_target = 0.78
         soft_dof_pos_limit = 0.9
         soft_dof_vel_limit = 0.9
         soft_torque_limit = 0.8
-        target_feet_height = 0.08  # m
+        base_height_target = 0.78
         base_feet_height = 0.035
+        target_feet_height = 0.08 # m
         cycle_time = 0.8 # sec
         target_air_time = 0.4
 
@@ -160,19 +161,19 @@ class g1Cfg(LeggedRobotCfg):
 
         class scales:
             # feet pos
-            hip_pos = 0.3
-            ankle_pos = -0.3
-            feet_contact = 0.3
+            hip_pos = 0.5
+            ankle_pos = -0.1
+            feet_contact = 0.5
             feet_air_time = -0.0
-            feet_height = -10.0
-            contact_no_vel = -0.2
+            feet_height = -10.
+            contact_no_vel = -0.3
             contact_forces = -0.0
 
             # vel tracking
-            tracking_lin_vel = 1.0
-            tracking_ang_vel = 0.5
-            ang_vel_xy = -0.05
-            lin_vel_z = -2.0
+            tracking_lin_vel = 2.0
+            tracking_ang_vel = 1.0
+            ang_vel_xy = -0.1
+            lin_vel_z = -3.0
 
             # base pos
             orientation = -1.
@@ -182,11 +183,11 @@ class g1Cfg(LeggedRobotCfg):
             action_rate = -0.01
             torques = -1e-5
             dof_vel = -1e-3
-            dof_acc = -1e-7
+            dof_acc = -2.5e-7
             collision = -1.0
             dof_pos_limits = -5.0
             torque_limits = -1e-2
-            alive = 0.3
+            alive = 0.5
 
     class normalization:
         class obs_scales:
@@ -201,21 +202,21 @@ class g1Cfg(LeggedRobotCfg):
 
 
 class g1CfgPPO(LeggedRobotCfgPPO):
-    # OnPolicyRunner  EstOnPolicyRunner  RNNOnPolicyRunner
-    # DWLOnPolicyRunner PIAOnPolicyRunner SymOnPolicyRunner
-    runner_class_name = 'RNNOnPolicyRunner'
+    # OnPolicyRunner  RNNOnPolicyRunner  GECOnPolicyRunner
+    runner_class_name = 'OnPolicyRunner'
 
     class policy:
-        # # only for 'OnPolicyRunner', 'OnPolicyRunner' and 'SymOnPolicyRunner':
-        # actor_hidden_dims = [512, 256, 128]
-        # critic_hidden_dims = [768, 256, 128]
+        init_noise_std = 1.0
+        # only for 'OnPolicyRunner'
+        actor_hidden_dims = [512, 256, 128]
+        critic_hidden_dims = [768, 256, 128]
 
-        # only for 'RNNOnPolicyRunner', 'DWLOnPolicyRunner' and 'PIAOnPolicyRunner':
-        actor_hidden_dims = [32]
-        critic_hidden_dims = [32]
-        rnn_type = 'lstm'
-        rnn_hidden_size = 64
-        rnn_num_layers = 1
+        # # only for 'RNNOnPolicyRunner' and 'GECOnPolicyRunner':
+        # actor_hidden_dims = [32]
+        # critic_hidden_dims = [32]
+        # rnn_type = 'lstm'
+        # rnn_hidden_size = 64
+        # rnn_num_layers = 1
 
     class algorithm(LeggedRobotCfgPPO.algorithm):
         schedule = 'adaptive'
@@ -234,7 +235,6 @@ class g1CfgPPO(LeggedRobotCfgPPO):
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.
         experiment_name = 'g1'
-        run_name = ''
         # Load and resume
         resume = False
         load_run = -1  # -1 = last run
