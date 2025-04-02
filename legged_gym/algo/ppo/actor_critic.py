@@ -83,14 +83,14 @@ class ActorCritic(nn.Module):
         mean = self.actor(observations)
         self.distribution = Normal(mean, mean*0. + self.std)
 
-    def act(self, observations, critic_observations, obs_history, **kwargs):
+    def act(self, observations, **kwargs):
         self.update_distribution(observations)
         return self.distribution.sample()
     
     def get_actions_log_prob(self, actions):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
-    def act_inference(self, observations, critic_observations, obs_history):
+    def act_inference(self, observations, obs_history):
         actions_mean = self.actor(observations)
         return actions_mean
 

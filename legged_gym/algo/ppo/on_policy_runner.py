@@ -21,10 +21,7 @@ class OnPolicyRunner:
         self.all_cfg = train_cfg
         self.device = device
         self.env = env
-        if self.env.num_privileged_obs is not None:
-            num_critic_obs = self.env.num_privileged_obs
-        else:
-            num_critic_obs = self.env.num_obs
+
         actor_critic_class = eval(self.cfg["policy_class_name"])  # ActorCritic
         actor_critic: ActorCritic = actor_critic_class(self.env.num_obs,
                                                        self.env.num_critic_obs,

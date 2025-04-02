@@ -1,28 +1,28 @@
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
 
-class g1Cfg(LeggedRobotCfg):
+class x2Cfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
         frame_stack = 1
         c_frame_stack = 1
         o_h_frame_stack = 25
 
-        num_single_obs = 46
-        num_single_critic_obs = 46 + 8# + 3
+        num_single_obs = 40
+        num_single_critic_obs = 40 + 8# + 3
         num_privileged_obs = 8# + 3
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)
 
-        num_actions = 12
+        num_actions = 10
         num_envs = 4096
         episode_length_s = 24  # episode length in seconds
         use_ref_actions = False
 
     class asset(LeggedRobotCfg.asset):
-        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1/g1_12dof.urdf'
-        name = "g1"
-        foot_name = "ankle_roll"
+        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/x2/x2.urdf'
+        name = "x2"
+        foot_name = "ankle"
         knee_name = "knee"
         terminate_after_contacts_on = ['pelvis']
         penalize_contacts_on = ["knee", "hip"]
@@ -55,38 +55,34 @@ class g1Cfg(LeggedRobotCfg):
             height_measurements = 0.1
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.8]
+        pos = [0.0, 0.0, 0.9]
 
         default_joint_angles = { # = target angles [rad] when action = 0.0
-            'left_hip_pitch_joint': -0.1,
-            'left_hip_roll_joint': 0,
-            'left_hip_yaw_joint' : 0. ,
-            'left_knee_joint' : 0.3,
-            'left_ankle_pitch_joint' : -0.2,
-            'left_ankle_roll_joint' : 0,
+            'L_hip_yaw': 0.,
+            'L_hip_roll': 0.,
+            'L_hip_pitch': 0.3,
+            'L_knee_pitch': -0.6,
+            'L_ankle_pitch': 0.3,
 
-            'right_hip_pitch_joint': -0.1,
-            'right_hip_roll_joint': 0,
-            'right_hip_yaw_joint' : 0.,
-            'right_knee_joint' : 0.3,
-            'right_ankle_pitch_joint': -0.2,
-            'right_ankle_roll_joint' : 0,
-
-            'torso_joint' : 0.
+            'R_hip_yaw': 0.,
+            'R_hip_roll': 0.,
+            'R_hip_pitch': 0.3,
+            'R_knee_pitch': -0.6,
+            'R_ankle_pitch': 0.3,
         }
 
     class control(LeggedRobotCfg.control):
-        stiffness = {'hip_yaw': 100,
-                     'hip_roll': 100,
-                     'hip_pitch': 100,
-                     'knee': 150,
-                     'ankle': 40,
+        stiffness = {'hip_yaw': 200,
+                     'hip_roll': 200,
+                     'hip_pitch': 250,
+                     'knee': 250,
+                     'ankle': 50,
                      }  # [N*m/rad]
-        damping = {  'hip_yaw': 2,
-                     'hip_roll': 2,
-                     'hip_pitch': 2,
-                     'knee': 4,
-                     'ankle': 2,
+        damping = {  'hip_yaw': 4,
+                     'hip_roll': 4,
+                     'hip_pitch': 5,
+                     'knee': 5,
+                     'ankle': 4,
                      }  # [N*m/rad]  # [N*m*s/rad]
 
         action_scale = 0.25
@@ -99,9 +95,9 @@ class g1Cfg(LeggedRobotCfg):
 
     class domain_rand:
         push_robots = True
-        push_interval_s = 5
-        max_push_vel_xy = 1.5
-        max_push_ang_vel = 1.0
+        push_interval_s = 8
+        max_push_vel_xy = 0.5
+        max_push_ang_vel = 0.3
         dynamic_randomization = 0.02
 
         randomize_commands = True
@@ -113,7 +109,7 @@ class g1Cfg(LeggedRobotCfg):
         rd_mass_range = [0.5, 1.5]
         randomize_all_com = False
         rd_com_range = [-0.03, 0.03]
-        randomize_base_com = False
+        randomize_base_com = True
         added_com_range = [-0.10, 0.10]
         randomize_Kp_factor = False
         Kp_factor_range = [0.8, 1.2]
@@ -147,10 +143,10 @@ class g1Cfg(LeggedRobotCfg):
         soft_dof_pos_limit = 0.9
         soft_dof_vel_limit = 0.9
         soft_torque_limit = 0.8
-        base_height_target = 0.78
-        base_feet_height = 0.035
-        target_feet_height = 0.08 # m
-        cycle_time = 0.8 # sec
+        base_height_target = 0.86
+        base_feet_height = 0.09
+        target_feet_height = 0.06 # m
+        cycle_time = 0.7 # sec
         target_air_time = 0.4
 
         # if true negative total rewards are clipped at zero (avoids early termination problems)
@@ -161,13 +157,13 @@ class g1Cfg(LeggedRobotCfg):
 
         class scales:
             # feet pos
-            hip_pos = 0.5
-            ankle_pos = -0.1
+            hip_pos = -3.0
+            ankle_pos = -1.0
             feet_contact = 0.5
             feet_air_time = -0.0
             feet_height = -10.
-            contact_no_vel = -0.3
-            contact_forces = -0.0
+            contact_no_vel = -0.0
+            contact_forces = -0.01
 
             # vel tracking
             tracking_lin_vel = 2.0
@@ -176,11 +172,12 @@ class g1Cfg(LeggedRobotCfg):
             lin_vel_z = -3.0
 
             # base pos
+            default_dof_pos = -0.05
             orientation = -1.
             base_height = -1.
 
             # energy
-            action_rate = -0.01
+            action_rate = -0.03
             torques = -1e-5
             dof_vel = -1e-3
             dof_acc = -2.5e-7
@@ -201,7 +198,7 @@ class g1Cfg(LeggedRobotCfg):
         clip_actions = 20.
 
 
-class g1CfgPPO(LeggedRobotCfgPPO):
+class x2CfgPPO(LeggedRobotCfgPPO):
     # OnPolicyRunner  RNNOnPolicyRunner  GECOnPolicyRunner
     runner_class_name = 'RNNOnPolicyRunner'
 
@@ -234,7 +231,7 @@ class g1CfgPPO(LeggedRobotCfgPPO):
 
         # logging
         save_interval = 100  # Please check for potential savings every `save_interval` iterations.
-        experiment_name = 'g1'
+        experiment_name = 'x2'
         # Load and resume
         resume = False
         load_run = -1  # -1 = last run

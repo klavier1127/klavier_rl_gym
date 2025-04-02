@@ -878,6 +878,9 @@ class LeggedRobot(BaseTask):
         return torch.square(error)
 
     ################################# balance ##################################################
+    def _reward_default_dof_pos(self):
+        return torch.norm(self.dof_pos - self.default_dof_pos, dim=-1)
+
     def _reward_orientation(self):
         error = torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1)
         error += torch.sum(torch.square(self.base_euler_xyz[:, :2]), dim=1)
