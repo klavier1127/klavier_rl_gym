@@ -31,7 +31,6 @@ class SimBase(object):
         self.action_filter = np.zeros(self.cfg.env.num_actions, dtype=np.double)
         self.num_actions = self.cfg.env.num_actions
         self.default_dof_pos = self.cfg.robot_config.default_dof_pos
-        self.wb_pos = self.cfg.robot_config.wb_pos
         # obs
         self.hist_obs = deque()
         for _ in range(self.cfg.env.frame_stack):
@@ -39,19 +38,6 @@ class SimBase(object):
         self.obs_history = deque()
         for _ in range(self.cfg.env.o_h_frame_stack):
             self.obs_history.append(np.zeros([1, self.cfg.env.num_single_obs], dtype=np.double))
-
-    def ref_trajectory(self, cnt_pd_loop):
-        leg_l = math.sin(2 * math.pi * cnt_pd_loop * 0.001 / self.cfg.control.cycle_time)  # x * 0.001, ms -> s
-        leg_r = math.sin(2 * math.pi * cnt_pd_loop * 0.001 / self.cfg.control.cycle_time)  # x * 0.001, ms -> s
-        ref_dof_pos = np.zeros(self.cfg.env.num_actions, dtype=np.float32)
-        ref_dof_pos[2] = self.wb_pos[2] + leg_l * 0.17
-        ref_dof_pos[3] = self.wb_pos[3] - leg_l * 0.34
-        ref_dof_pos[4] = self.wb_pos[4] + leg_l * 0.17
-
-        ref_dof_pos[7] = self.wb_pos[7] + leg_r * 0.17
-        ref_dof_pos[8] = self.wb_pos[8] - leg_r * 0.34
-        ref_dof_pos[9] = self.wb_pos[9] + leg_r * 0.17
-        return ref_dof_pos
 
     def run(self):
         pass

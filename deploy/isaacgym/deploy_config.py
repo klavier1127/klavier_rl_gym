@@ -44,13 +44,10 @@ class deploy_config:
                                           0, 0.05, 0.3, -0.6, 0.3,
                                                                    -0.3, 0.1, 0, 1.5,
                                                                    -0.3, 0.1, 0, 1.5], dtype=np.double)
-        wb_pos = np.array([0, 0.05, 0.3, -0.6, 0.3,
-                                 0, 0.05, 0.3, -0.6, 0.3,
-                                                           -0.3, 0.1, 0, 1.5,
-                                                           -0.3, 0.1, 0, 1.5], dtype=np.double)
+
         standkps = np.array([150, 150, 150, 150, 50, 150, 150, 150, 150, 50], dtype=np.double)
         standkds = np.array([  1,   3,   3,   3,  3,   1,   3,   3,   3,  3], dtype=np.double)
-        kps = np.array([100, 200, 250, 250, 50, 100, 200, 250, 250, 50], dtype=np.double)
-        kds = np.array([  2,   4,   5,   5,  4,   2,   4,   5,   5,  4], dtype=np.double)
+        kps = np.array([100, 200, 200, 200, 30, 100, 200, 200, 200, 30], dtype=np.double)
+        kds = np.array([  2,   4,   4,   4,  4,   2,   4,   4,   4,  4], dtype=np.double)
         tau_limit = np.array([30, 45, 60, 60, 30,  30, 45, 60, 60, 30], dtype=np.double)
 

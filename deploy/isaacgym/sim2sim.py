@@ -19,7 +19,7 @@ class Sim2Sim(SimBase):
         self.model.opt.timestep = 0.001
         self.data = mujoco.MjData(self.model)
         self.data.qpos[7:] = self.default_dof_pos[:10]
-        self.cmd = np.array([2.0, 0.0, 0.0])
+        self.cmd = np.array([0.0, 0.0, 0.0])
         mujoco.mj_step(self.model, self.data)
         self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data)
 
@@ -45,20 +45,16 @@ class Sim2Sim(SimBase):
     def run(self):
         cnt_pd_loop = 0
         phase = 0
-        pbar = tqdm(range(int(self.cfg.env.run_duration / 0.001)),
-                    desc="x02 Simulating...")  # x * 0.001, ms -> s
+        pbar = tqdm(range(int(self.cfg.env.run_duration / 0.001)), desc="x02 Simulating...")  # x * 0.001, ms -> s
         start = time.perf_counter()
         for _ in pbar:
             start_time = time.perf_counter()
             # Obtain an observation
             q, dq, omega, euler = self.get_obs()
 
-            speed_command = np.linalg.norm(self.cmd[:2])
-            stand_mask = speed_command < 0.2
-            cycle_time = 0.7
+            cycle_time = 0.6
             dt_phase = self.cfg.sim_config.dt / cycle_time
             phase = phase + dt_phase
-
             phase_sin = np.sin(2 * math.pi * phase)
             phase_cos = np.cos(2 * math.pi * phase)
             # 1000hz -> 100hz
@@ -104,66 +100,14 @@ class Sim2Sim(SimBase):
             timer.waiting(start_time)  # 等待下一个时间步长
 
     def init_robot(self):
-        final_goal = self.wb_pos
+        final_goal = self.default_dof_pos
         self.joint_plan(1, final_goal)
         for idx in range(self.cfg.env.num_actions):
             self.target_q[idx] = final_goal[idx]
-
-    def show(self):
-        m = self.model
-        name = m.names.decode('utf-8').split('\x00')
-        print("\033[32m>>The robot: %s with %d dof, DofProperties information as follow:\033[0m" % (name[0], m.njnt))
-        print(
-            "\033[32m+--------------------+------+-----+----------------+---------+-----------+------------------+------------------+--------+\033[0m")
-        print(
-            "\033[33m|     Joint names    | type | idx |   default_pos  | damping | stiffness |   limits_lower   |   limits_upper   | margin |\033[0m")
-        print(
-            "\033[32m+--------------------+------+-----+----------------+---------+-----------+------------------+------------------+--------+\033[0m")
-        for i in range(0, m.njnt):
-            jointName = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_JOINT, i)
-            print(
-                "| %-19s|  %2d  |  %2d | %5.2f(%7.2f) | %5.1f   | %6.1f    | %7.4f(%7.2f) | %7.4f(%7.2f) |  %5.2f |" % (
-                    jointName, m.jnt_type[i], i,
-                    m.qpos0[i], np.rad2deg(m.qpos0[i]),
-                    m.dof_damping[i],
-                    m.jnt_stiffness[i],
-                    m.jnt_range[i][0], np.rad2deg(m.jnt_range[i][0]),
-                    m.jnt_range[i][1], np.rad2deg(m.jnt_range[i][1]),
-                    m.jnt_margin[i]))
-        print(
-            "\033[32m+--------------------+------+-----+----------------+---------+-----------+------------------+------------------+--------+\033[0m")
-        print("\033[32m>>The robot: %s with %d actuators/controls(ctrl) informations:\033[0m" % (name[0], m.nu))
-        print("\033[32m+--------------------+----------+----+-------+---------+---------+\033[0m")
-        print("\033[33m|     Joint names    | actuator | id | limit | c_lower | c_upper |\033[0m")
-        print("\033[32m+--------------------+----------+----+-------+---------+---------+\033[0m")
-        for i in range(0, m.nu):
-            joint_id = m.actuator_trnid[i]  # 获取关节 ID
-            jointName = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_JOINT, joint_id[0])  # 获取关节名称
-            actuatorName = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_ACTUATOR, i)
-            print("| %-19s|   %-6s | %2d |   %d   | %7.2f | %7.2f |" % (
-                jointName, actuatorName, i,
-                m.actuator_ctrllimited[i],
-                m.actuator_ctrlrange[i][0],
-                m.actuator_ctrlrange[i][1]))
-        print("\033[32m+--------------------+----------+----+-------+---------+---------+\033[0m")
-        print("\033[32m>>The robot: %s with %d sensors informations:\033[0m" % (name[0], m.nsensor))
-        print("\033[32m+--------+----+-----+---------+\033[0m")
-        print("\033[33m| sensor | id | dim | address |\033[0m")
-        print("\033[32m+--------+----+-----+---------+\033[0m")
-        for j in range(0, m.nsensor):
-            SensorName = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_SENSOR, j);
-            print("| %-6s | %2d |   %d |    %2d   |" % (
-                SensorName, j,
-                m.sensor_dim[j],
-                m.sensor_adr[j]))
-        print("\033[32m+--------+----+-----+---------+\033[0m")
-        print("\033[32m>> the end of joint and sensor information !\033[0m")
-
 
 if __name__ == '__main__':
     mode_path = "/home/droid/IssacGym-projects/klavier_rl_gym/logs/x2/exported/policies/policy_lstm.pt"
     policy = torch.jit.load(mode_path)
     mybot = Sim2Sim(deploy_config, policy)
-    mybot.show()
     mybot.init_robot()
     mybot.run()

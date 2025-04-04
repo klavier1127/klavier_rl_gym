@@ -15,8 +15,6 @@ class Sim2Real(SimBase, DroidGrpcClient):
         SimBase.__init__(self, _cfg, _policy)
         DroidGrpcClient.__init__(self, _grpc_channel)
         self.robotCommand.cmd_enable = 2  # joint control mode
-        self.omega_filter = np.zeros(3, dtype=np.float32)
-        self.omega_history = np.zeros(3, dtype=np.double)
 
         for i in range(10):
             self.robotCommand.kp[i] = self.cfg.robot_config.kps[i]
@@ -24,7 +22,7 @@ class Sim2Real(SimBase, DroidGrpcClient):
             self.robotCommand.max_torque[i] = self.cfg.robot_config.tau_limit[i]
 
     def init_robot(self):
-        self.joint_plan(1, self.wb_pos)
+        self.joint_plan(1, self.default_dof_pos)
         timer = NanoSleep(self.cfg.control.decimation)  # 创建一个1毫秒的NanoSleep对象
         self.get_robot_state()
         temp_tic = self.robotState.system_tic
@@ -34,7 +32,7 @@ class Sim2Real(SimBase, DroidGrpcClient):
             start_time = time.perf_counter()
             self.get_robot_state()
             timer.waiting(start_time)
-        print("单击CH6开始, CH8右滑到底急停",self.robotState.imu_euler)
+        print("单击CH6开始, CH8右滑到底急停", self.robotState.imu_euler)
 
         while (self.robotState.rc_keys[3] == 0) and (self.run_flag == True):  # CH6
             start_time = time.perf_counter()
@@ -67,9 +65,8 @@ class Sim2Real(SimBase, DroidGrpcClient):
             start_time = time.perf_counter()
             self.get_robot_state()
 
-            cycle_time = 0.7
+            cycle_time = 0.6
             phase = torch.tensor(cnt_pd_loop * self.cfg.sim_config.dt / cycle_time)
-
             phase_sin = np.sin(2 * math.pi * phase)
             phase_cos = np.cos(2 * math.pi * phase)
             q, dq, omega, eu_ang = self.get_obs()
@@ -102,9 +99,6 @@ class Sim2Real(SimBase, DroidGrpcClient):
                     self.robotCommand.kd[idx] = self.cfg.robot_config.kds[idx]
                     self.robotCommand.position[idx] = self.target_q[idx]
 
-            # self.robotCommand.position[0] =0.000
-            # self.robotCommand.position[5] =0.000
-
             self.set_robot_command()
             pbar.set_postfix(
                 realCycle=f"{self.robotState.system_tic - pre_tic}ms",  # 实际循环周期，单位毫秒
@@ -119,11 +113,10 @@ class Sim2Real(SimBase, DroidGrpcClient):
 
 if __name__ == '__main__':
     mode_path = "/home/droid/IssacGym-projects/klavier_rl_gym/logs/x2/exported/policies/policy_lstm.pt"
-    channel = insecure_channel('192.168.55.10:50051')
+    channel = insecure_channel('192.168.55.12:50051')
     policy = torch.jit.load(mode_path)
     mybot = Sim2Real(deploy_config, policy, channel)
     mybot.init_robot()
     mybot.fox_run()
     mybot.run()
     mybot.fox_stop()
-

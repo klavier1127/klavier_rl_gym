@@ -19,10 +19,15 @@ class x2Cfg(LeggedRobotCfg):
         episode_length_s = 24  # episode length in seconds
         use_ref_actions = False
 
+    class safety:
+        pos_limit = 0.9
+        vel_limit = 0.9
+        torque_limit = 0.85
+
     class asset(LeggedRobotCfg.asset):
         file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/x2/x2.urdf'
         name = "x2"
-        foot_name = "ankle"
+        foot_name = "ankle_pitch"
         knee_name = "knee"
         terminate_after_contacts_on = ['pelvis']
         penalize_contacts_on = ["knee", "hip"]
@@ -47,9 +52,9 @@ class x2Cfg(LeggedRobotCfg):
         noise_level = 1.0    # scales other values
 
         class noise_scales:
-            dof_pos = 0.01
+            dof_pos = 0.03
             dof_vel = 1.5
-            ang_vel = 0.2
+            ang_vel = 0.3
             lin_vel = 0.1
             quat = 0.05
             height_measurements = 0.1
@@ -74,14 +79,14 @@ class x2Cfg(LeggedRobotCfg):
     class control(LeggedRobotCfg.control):
         stiffness = {'hip_yaw': 200,
                      'hip_roll': 200,
-                     'hip_pitch': 250,
-                     'knee': 250,
-                     'ankle': 50,
+                     'hip_pitch': 200,
+                     'knee': 200,
+                     'ankle': 30,
                      }  # [N*m/rad]
         damping = {  'hip_yaw': 4,
                      'hip_roll': 4,
-                     'hip_pitch': 5,
-                     'knee': 5,
+                     'hip_pitch': 4,
+                     'knee': 4,
                      'ankle': 4,
                      }  # [N*m/rad]  # [N*m*s/rad]
 
@@ -96,8 +101,8 @@ class x2Cfg(LeggedRobotCfg):
     class domain_rand:
         push_robots = True
         push_interval_s = 8
-        max_push_vel_xy = 0.5
-        max_push_ang_vel = 0.3
+        max_push_vel_xy = 0.8
+        max_push_ang_vel = 0.5
         dynamic_randomization = 0.02
 
         randomize_commands = True
@@ -107,21 +112,21 @@ class x2Cfg(LeggedRobotCfg):
         added_mass_range = [-5., 5.]
         randomize_all_mass = False
         rd_mass_range = [0.5, 1.5]
-        randomize_all_com = False
+        randomize_all_com = True
         rd_com_range = [-0.03, 0.03]
         randomize_base_com = True
-        added_com_range = [-0.10, 0.10]
-        randomize_Kp_factor = False
+        added_com_range = [-0.06, 0.06]
+        randomize_Kp_factor = True
         Kp_factor_range = [0.8, 1.2]
-        randomize_Kd_factor = False
+        randomize_Kd_factor = True
         Kd_factor_range = [0.8, 1.2]
-        randomize_motor_strength = False
-        motor_strength_range = [0.9, 1.1]
-        randomize_motor_offset = False
+        randomize_motor_strength = True
+        motor_strength_range = [0.8, 1.2]
+        randomize_motor_offset = True
         motor_offset_range = [-0.035, 0.035]
-        randomize_joint_friction = False
+        randomize_joint_friction = True
         joint_friction_range = [0.01, 1.15]
-        randomize_joint_damping = False
+        randomize_joint_damping = True
         joint_damping_range = [0.3, 1.5]
         randomize_joint_armature = True
         joint_armature_range = [0.01, 0.03]
@@ -135,7 +140,7 @@ class x2Cfg(LeggedRobotCfg):
 
         class ranges:
             lin_vel_x = [-1.0, 2.0]  # min max [m/s]
-            lin_vel_y = [-1.0, 1.0]   # min max [m/s]
+            lin_vel_y = [-0.5, 0.5]   # min max [m/s]
             ang_vel_yaw = [-1, 1]    # min max [rad/s]
             heading = [-1.57, 1.57]
 
@@ -146,30 +151,30 @@ class x2Cfg(LeggedRobotCfg):
         base_height_target = 0.86
         base_feet_height = 0.09
         target_feet_height = 0.06 # m
-        cycle_time = 0.7 # sec
-        target_air_time = 0.4
+        cycle_time = 0.6 # sec
+        target_air_time = 0.3
 
         # if true negative total rewards are clipped at zero (avoids early termination problems)
         only_positive_rewards = False
         # tracking reward = exp(error*sigma)
         tracking_sigma = 0.5
-        max_contact_force = 500     # Forces above this value are penalized
+        max_contact_force = 400     # Forces above this value are penalized
 
         class scales:
             # feet pos
-            hip_pos = -3.0
-            ankle_pos = -1.0
+            hip_pos = -2.0
+            ankle_pos = -0.0
             feet_contact = 0.5
             feet_air_time = -0.0
             feet_height = -10.
-            contact_no_vel = -0.0
+            contact_no_vel = -0.3
             contact_forces = -0.01
 
             # vel tracking
             tracking_lin_vel = 2.0
             tracking_ang_vel = 1.0
             ang_vel_xy = -0.1
-            lin_vel_z = -3.0
+            lin_vel_z = -2.0
 
             # base pos
             default_dof_pos = -0.05
@@ -184,7 +189,7 @@ class x2Cfg(LeggedRobotCfg):
             collision = -1.0
             dof_pos_limits = -5.0
             torque_limits = -1e-2
-            alive = 0.5
+            alive = 0.3
 
     class normalization:
         class obs_scales:
@@ -203,7 +208,7 @@ class x2CfgPPO(LeggedRobotCfgPPO):
     runner_class_name = 'RNNOnPolicyRunner'
 
     class policy:
-        init_noise_std = 1.0
+        # init_noise_std = 1.0
         # # only for 'OnPolicyRunner'
         # actor_hidden_dims = [512, 256, 128]
         # critic_hidden_dims = [768, 256, 128]

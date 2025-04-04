@@ -106,4 +106,9 @@ class x2Env(LeggedRobot):
         reward = 1. * (self.contacts == walk_mask)
         return torch.sum(reward, dim=1)
 
+    # def _reward_feet_height(self):  # 稀疏奖励，仅在训练跑步步态时用
+    #     swing_mask = 1 - (1. * self._get_walk_mask())
+    #     rew_feetHeight = torch.abs(self.feet_pos[:, :, 2] - self.cfg.rewards.base_feet_height - self.cfg.rewards.target_feet_height) < 0.01
+    #     rew_feetHeight = torch.sum(rew_feetHeight * swing_mask, dim=1)
+    #     return rew_feetHeight
 

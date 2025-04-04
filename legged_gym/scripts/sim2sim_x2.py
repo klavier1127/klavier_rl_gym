@@ -36,38 +36,6 @@ def get_obs(data):
 def pd_control(default_dof_pos, target_q, q, kp, target_dq, dq, kd):
     return (target_q - q + default_dof_pos) * kp + (target_dq - dq) * kd
 
-vx, vy, dyaw = 0.0, 0.0, 0.0
-def on_press(key):
-    global vx, vy, dyaw
-    try:
-        if key.char == '2':  # 向前
-            vx += 0.1
-        elif key.char == '3':  # 向后
-            vx -= 0.1
-        elif key.char == '4':  # 向左
-            vy += 0.1
-        elif key.char == '5':  # 向右
-            vy -= 0.1
-        elif key.char == '6':  # 逆时针旋转
-            dyaw += 0.1
-        elif key.char == '7':  # 顺时针旋转
-            dyaw -= 0.1
-        elif key.char == '`':
-            vx = 0.0
-            vy = 0.0
-            dyaw = 0.0
-
-        # 限制速度范围
-        vx = np.clip(vx, -1.0, 2.0)
-        vy = np.clip(vy, -0.5, 0.5)
-        dyaw = np.clip(dyaw, -1.0, 1.0)
-    except AttributeError:
-        pass
-
-# 启动键盘监听器
-listener = keyboard.Listener(on_press=on_press)
-listener.start()
-
 def run_mujoco(policy, cfg):
     model = mujoco.MjModel.from_xml_path(cfg.sim_config.mujoco_model_path)
     model.opt.timestep = cfg.sim_config.dt
@@ -96,9 +64,10 @@ def run_mujoco(policy, cfg):
 
         # 1000hz -> 100hz
         force = [0, 0, 0]
+        vx, vy, dyaw = 0.0, 0.0, 0.0
         cmd = np.array([[vx, vy, dyaw]], dtype=np.float32)
 
-        cycle_time = 0.7
+        cycle_time = 0.6
         dt_phase = cfg.sim_config.dt / cycle_time
         phase = phase + dt_phase
 
@@ -167,8 +136,8 @@ if __name__ == '__main__':
             dt = 0.001
             decimation = 20
         class robot_config:
-            kps = np.array([200, 200, 250, 250, 50,     200, 200, 250, 250, 50], dtype=np.double)
-            kds = np.array([  4,   4,   5,   5,  4,       4,   4,   5,   5,  4], dtype=np.double)
+            kps = np.array([200, 200, 200, 200, 30,     200, 200, 200, 200, 30], dtype=np.double)
+            kds = np.array([  4,   4,   4,   4,  4,       4,   4,   4,   4,  4], dtype=np.double)
             tau_limit = np.array([30, 45, 60, 60, 30,    30,  45,  60,  60,  30], dtype=np.double)
 
 
