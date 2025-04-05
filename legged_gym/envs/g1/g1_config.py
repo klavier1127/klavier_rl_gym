@@ -8,8 +8,8 @@ class g1Cfg(LeggedRobotCfg):
         o_h_frame_stack = 25
 
         num_single_obs = 46
-        num_single_critic_obs = 46 + 8# + 3
-        num_privileged_obs = 8# + 3
+        num_single_critic_obs = 46 + 7# + 3
+        num_privileged_obs = 7# + 3
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)
@@ -160,8 +160,8 @@ class g1Cfg(LeggedRobotCfg):
 
         class scales:
             # feet pos
-            hip_pos = 0.5
-            ankle_pos = -0.1
+            hip_pos = -2.
+            ankle_pos = -0.3
             feet_contact = 0.5
             feet_air_time = -0.0
             feet_height = -10.
@@ -175,6 +175,7 @@ class g1Cfg(LeggedRobotCfg):
             lin_vel_z = -2.0
 
             # base pos
+            default_dof_pos = -0.05
             orientation = -1.
             base_height = -1.
 

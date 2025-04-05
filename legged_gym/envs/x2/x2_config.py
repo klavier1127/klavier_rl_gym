@@ -60,7 +60,7 @@ class x2Cfg(LeggedRobotCfg):
             height_measurements = 0.1
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.95]
+        pos = [0.0, 0.0, 0.90]
 
         default_joint_angles = { # = target angles [rad] when action = 0.0
             'L_hip_yaw': 0.,
