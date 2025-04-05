@@ -1,16 +1,10 @@
 import os
-import sys
 import math
 import time
 import asyncio
 import threading
 from base64 import b64encode
-# from foxglove_websocket.server import FoxgloveServer
 from grpc import insecure_channel
-
-sys.path.append(os.path.abspath("/home/droid/x02gym/projects/deploy"))
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../protos'))
-
 from deploy.protos import ecatplat_service_pb2_grpc as service_pb2_grpc
 from deploy.protos import motion_control_pb2 as msg_pb2
 

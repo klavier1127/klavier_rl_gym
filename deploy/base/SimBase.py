@@ -1,9 +1,7 @@
-import math
 import time
 import torch
 import numpy as np
 from collections import deque
-
 
 class NanoSleep:
     def __init__(self, ms):

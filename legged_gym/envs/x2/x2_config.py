@@ -8,8 +8,8 @@ class x2Cfg(LeggedRobotCfg):
         o_h_frame_stack = 25
 
         num_single_obs = 40
-        num_single_critic_obs = 40 + 8# + 3
-        num_privileged_obs = 8# + 3
+        num_single_critic_obs = 40 + 7# + 3
+        num_privileged_obs = 7# + 3
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)

@@ -1,15 +1,15 @@
 import math
 import time
-import copy
 import torch
 import mujoco
 import mujoco_viewer
 import numpy as np
 from tqdm import tqdm
+from deploy import DEPLOY_ROOT_DIR
 from deploy_config import deploy_config
 from deploy.base.SimBase import SimBase
 from deploy.base.SimBase import NanoSleep
-from deploy.utils.math import quat_to_euler
+from deploy.utils.math_utils import quat_to_euler
 
 
 class Sim2Sim(SimBase):
@@ -106,7 +106,7 @@ class Sim2Sim(SimBase):
             self.target_q[idx] = final_goal[idx]
 
 if __name__ == '__main__':
-    mode_path = "/home/droid/IssacGym-projects/klavier_rl_gym/logs/x2/exported/policies/policy_lstm.pt"
+    mode_path = f"{DEPLOY_ROOT_DIR}/logs/x2/exported/policies/policy_lstm.pt"
     policy = torch.jit.load(mode_path)
     mybot = Sim2Sim(deploy_config, policy)
     mybot.init_robot()

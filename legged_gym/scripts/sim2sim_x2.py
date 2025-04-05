@@ -1,14 +1,11 @@
 import math
-from pynput import keyboard
 import numpy as np
 import mujoco, mujoco_viewer
 from tqdm import tqdm
 from collections import deque
 from legged_gym import LEGGED_GYM_ROOT_DIR
-
-
 from legged_gym.envs.x2.x2_config import x2Cfg
-from legged_gym.utils import quat_to_euler, quat_to_grav, euler_to_grav
+from legged_gym.utils import quat_to_euler
 import torch
 
 
@@ -22,8 +19,6 @@ def smooth_sqr_wave(phase, cycle_time):
     return np.sin(p) / (2*np.sqrt(np.sin(p)**2. + 0.2**2.)) + 1./2.
 
 def get_obs(data):
-    '''Extracts an observation from the mujoco data structure
-    '''
     q = data.qpos[7:]
     dq = data.qvel[6:]
     quat = data.qpos[3:7]
@@ -134,7 +129,7 @@ if __name__ == '__main__':
             mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/x2/scene.xml'
             sim_duration = 60.0
             dt = 0.001
-            decimation = 20
+            decimation = 20 # 50hz
         class robot_config:
             kps = np.array([200, 200, 200, 200, 30,     200, 200, 200, 200, 30], dtype=np.double)
             kds = np.array([  4,   4,   4,   4,  4,       4,   4,   4,   4,  4], dtype=np.double)
@@ -142,6 +137,5 @@ if __name__ == '__main__':
 
 
     model_path = "../logs/x2/exported/policies/policy_lstm.pt"
-    # model_path = "../logs/x02_2/exported/policies/policy_mlp.pt"
     policy = torch.jit.load(model_path)
     run_mujoco(policy, Sim2simCfg())

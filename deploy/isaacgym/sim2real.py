@@ -3,6 +3,7 @@ import time
 import torch
 import numpy as np
 from tqdm import tqdm
+from deploy import DEPLOY_ROOT_DIR
 from deploy_config import deploy_config
 from deploy.base.SimBase import SimBase
 from deploy.base.SimBase import NanoSleep
@@ -112,7 +113,7 @@ class Sim2Real(SimBase, DroidGrpcClient):
 
 
 if __name__ == '__main__':
-    mode_path = "/home/droid/IssacGym-projects/klavier_rl_gym/logs/x2/exported/policies/policy_lstm.pt"
+    mode_path = f"{DEPLOY_ROOT_DIR}/logs/x2/exported/policies/policy_lstm.pt"
     channel = insecure_channel('192.168.55.12:50051')
     policy = torch.jit.load(mode_path)
     mybot = Sim2Real(deploy_config, policy, channel)

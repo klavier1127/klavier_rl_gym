@@ -46,13 +46,11 @@ class x2Env(LeggedRobot):
             self.base_lin_vel * self.obs_scales.lin_vel,
             (self.root_states[:, 2].unsqueeze(1) - self.feet_pos[:, :, 2] - self.cfg.rewards.base_height_target) * 10.,
             self.contacts,
-            self.rew_buf.unsqueeze(1),
         ), dim=-1)
-        heights = self.root_states[:, 2].unsqueeze(1) - self.cfg.rewards.base_height_target - self.measured_heights
         if self.cfg.terrain.measure_heights:
             self.privileged_obs = torch.cat((
             self.privileged_obs,
-            heights,    # 15
+            self.root_states[:, 2].unsqueeze(1) - self.cfg.rewards.base_height_target - self.measured_heights,    # 15
         ), dim=-1)
 
         self.obs = torch.cat((

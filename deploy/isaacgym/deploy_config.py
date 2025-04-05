@@ -1,5 +1,5 @@
 import numpy as np
-from itertools import chain
+from deploy import DEPLOY_ROOT_DIR
 
 
 class deploy_config:
@@ -11,7 +11,7 @@ class deploy_config:
         num_observations = int(frame_stack * num_single_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)
         num_actions = 10
-        run_duration = 5000.0  # 单位s
+        run_duration = 5000.0 # 秒
 
     class cmd:
         vx = 0.0
@@ -19,16 +19,13 @@ class deploy_config:
         yaw = 0.0
 
     class sim_config:
-        # mujoco_model_path = f'../robots/X02Lite/X02Lite.xml'
         dt = 0.001
-        mujoco_model_path = f'/home/droid/IssacGym-projects/klavier_rl_gym/resources/robots/x2/scene.xml'
+        mujoco_model_path = f'{DEPLOY_ROOT_DIR}/resources/robots/x2/scene.xml'
 
     class control:
-        # action scale: target angle = actionScale * action + defaultAngle
         action_scale = 0.25
-        # decimation: Number of control action updates @ sim DT per policy DT
-        decimation = 20  # 100hz(10ms)
-        cycle_time = 0.8            # sec
+        decimation = 20
+        cycle_time = 0.7
 
     class normalization:
         class obs_scales:
