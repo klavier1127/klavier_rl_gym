@@ -33,9 +33,6 @@ class SimBase(object):
         self.hist_obs = deque()
         for _ in range(self.cfg.env.frame_stack):
             self.hist_obs.append(np.zeros([1, self.cfg.env.num_single_obs], dtype=np.double))
-        self.obs_history = deque()
-        for _ in range(self.cfg.env.o_h_frame_stack):
-            self.obs_history.append(np.zeros([1, self.cfg.env.num_single_obs], dtype=np.double))
 
     def run(self):
         pass
@@ -43,15 +40,10 @@ class SimBase(object):
     def get_action(self, obs):
         self.hist_obs.append(obs)
         self.hist_obs.popleft()
-        self.obs_history.append(obs)
-        self.obs_history.popleft()
         policy_input = np.zeros([1, self.cfg.env.num_observations], dtype=np.float32)
         for i in range(self.cfg.env.frame_stack):
             policy_input[0, i * self.cfg.env.num_single_obs: (i + 1) * self.cfg.env.num_single_obs] = self.hist_obs[i][0, :]
-        policy_input_history = np.zeros([1, self.cfg.env.num_obs_history], dtype=np.float32)
-        for i in range(self.cfg.env.o_h_frame_stack):
-            policy_input_history[0, i * self.cfg.env.num_single_obs: (i + 1) * self.cfg.env.num_single_obs] = self.obs_history[i][0, :]
-        self.action[:] = self.policy(torch.tensor(policy_input), torch.tensor(policy_input_history)).detach().numpy()
+        self.action[:] = self.policy(torch.tensor(policy_input)).detach().numpy()
         self.action = np.clip(self.action, -20.0, 20.0)
         self.action_filter = 0.7 * self.action_filter + 0.3 * self.action
         self.target_q = self.action_filter * self.cfg.control.action_scale

@@ -17,7 +17,6 @@ class g1Cfg(LeggedRobotCfg):
         num_actions = 12
         num_envs = 4096
         episode_length_s = 24  # episode length in seconds
-        use_ref_actions = False
 
     class asset(LeggedRobotCfg.asset):
         file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1/g1_12dof.urdf'
@@ -151,7 +150,7 @@ class g1Cfg(LeggedRobotCfg):
         base_feet_height = 0.035
         target_feet_height = 0.08 # m
         cycle_time = 0.8 # sec
-        target_air_time = 0.4
+        target_air_time = 0.4 # sec
 
         # if true negative total rewards are clipped at zero (avoids early termination problems)
         only_positive_rewards = False
@@ -173,7 +172,7 @@ class g1Cfg(LeggedRobotCfg):
             tracking_lin_vel = 2.0
             tracking_ang_vel = 1.0
             ang_vel_xy = -0.1
-            lin_vel_z = -3.0
+            lin_vel_z = -2.0
 
             # base pos
             orientation = -1.
@@ -187,7 +186,7 @@ class g1Cfg(LeggedRobotCfg):
             collision = -1.0
             dof_pos_limits = -5.0
             torque_limits = -1e-2
-            alive = 0.5
+            alive = 0.3
 
     class normalization:
         class obs_scales:

@@ -46,22 +46,15 @@ def run_mujoco(policy, cfg):
     hist_obs = deque()
     for _ in range(cfg.env.frame_stack):
         hist_obs.append(np.zeros([1, cfg.env.num_single_obs], dtype=np.double))
-    obs_history = deque()
-    for _ in range(cfg.env.o_h_frame_stack):
-        obs_history.append(np.zeros([1, cfg.env.num_single_obs], dtype=np.double))
 
     phase = 0
     count_lowlevel = 0
-
     for _ in tqdm(range(int(cfg.sim_config.sim_duration / cfg.sim_config.dt)), desc="Simulating..."):
-        # Obtain an observation
-        q, dq, omega, euler = get_obs(data)
-
-        # 1000hz -> 100hz
         force = [0, 0, 0]
         vx, vy, dyaw = 0.0, 0.0, 0.0
         cmd = np.array([[vx, vy, dyaw]], dtype=np.float32)
-
+        # Obtain an observation
+        q, dq, omega, euler = get_obs(data)
         cycle_time = 0.6
         dt_phase = cfg.sim_config.dt / cycle_time
         phase = phase + dt_phase
@@ -85,22 +78,13 @@ def run_mujoco(policy, cfg):
             obs = np.clip(obs, -cfg.normalization.clip_observations, cfg.normalization.clip_observations)
             hist_obs.append(obs)
             hist_obs.popleft()
-            obs_history.append(obs)
-            obs_history.popleft()
 
             policy_input = np.zeros([1, cfg.env.num_observations], dtype=np.float32)
             for i in range(cfg.env.frame_stack):
                 policy_input[0, i * cfg.env.num_single_obs: (i + 1) * cfg.env.num_single_obs] = hist_obs[i][0, :]
-            policy_input_history = np.zeros([1, cfg.env.num_obs_history], dtype=np.float32)
-            for i in range(cfg.env.o_h_frame_stack):
-                policy_input_history[0, i * cfg.env.num_single_obs: (i + 1) * cfg.env.num_single_obs] = obs_history[i][0, :]
-            action = policy(torch.tensor(policy_input), torch.tensor(policy_input_history)).detach().numpy()
-
+            action = policy(torch.tensor(policy_input)).detach().numpy()
             action = np.clip(action, -cfg.normalization.clip_actions, cfg.normalization.clip_actions)
             target_q = action * cfg.control.action_scale
-            # target_q[:, 0] = 0
-            # target_q[:, 6] = 0
-
         target_dq = np.zeros((cfg.env.num_actions), dtype=np.double)
         # Generate PD control
         tau = pd_control(default_pos, target_q, q, cfg.robot_config.kps, target_dq, dq, cfg.robot_config.kds)

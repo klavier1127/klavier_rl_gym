@@ -230,7 +230,7 @@ class PolicyExporterMLP(torch.nn.Module):
         super().__init__()
         self.actor = copy.deepcopy(actor_critic.actor)
 
-    def forward(self, obs, obs_history):
+    def forward(self, obs):
         return self.actor(obs)
 
     def export(self, path):
@@ -250,7 +250,7 @@ class PolicyExporterLSTM(torch.nn.Module):
         self.register_buffer(f'hidden_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
         self.register_buffer(f'cell_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
 
-    def forward(self, obs, obs_history):
+    def forward(self, obs):
         out, (h, c) = self.memory(obs.unsqueeze(0), (self.hidden_state, self.cell_state))
         self.hidden_state[:] = h
         self.cell_state[:] = c
@@ -277,7 +277,7 @@ class PolicyExporterGRU(torch.nn.Module):
         self.memory.cpu()
         self.register_buffer('hidden_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
 
-    def forward(self, obs, obs_history):
+    def forward(self, obs):
         out, h = self.memory(obs.unsqueeze(0), self.hidden_state)
         self.hidden_state[:] = h
         return self.actor(out.squeeze(0))

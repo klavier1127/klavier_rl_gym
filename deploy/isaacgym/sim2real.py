@@ -75,9 +75,9 @@ class Sim2Real(SimBase, DroidGrpcClient):
             obs = np.zeros([1, self.cfg.env.num_single_obs], dtype=np.float32)
             obs[0, 0] = phase_sin
             obs[0, 1] = phase_cos
-            obs[0, 2] = 1.5 * self.robotState.rc_du[0] * self.cfg.normalization.obs_scales.lin_vel
+            obs[0, 2] = 1.5 * self.robotState.rc_du[2] * self.cfg.normalization.obs_scales.lin_vel
             obs[0, 3] = 0.5 * self.robotState.rc_du[1] * self.cfg.normalization.obs_scales.lin_vel
-            obs[0, 4] = self.robotState.rc_du[3] * 2
+            obs[0, 4] = self.robotState.rc_du[3] * 0.5
             obs[0, 5:15] = q - self.default_dof_pos[:10]
             obs[0, 15:25] = dq * 0.05
             obs[0, 25:35] = self.action
