@@ -1,5 +1,4 @@
 import math
-from pynput.keyboard import Listener
 import numpy as np
 import mujoco, mujoco_viewer
 from tqdm import tqdm
@@ -23,30 +22,6 @@ def get_obs(data):
 def pd_control(default_dof_pos, target_q, q, kp, target_dq, dq, kd):
     return (target_q - q + default_dof_pos) * kp + (target_dq - dq) * kd
 
-vx, vy, dyaw = 0.0, 0.0, 0.0
-def on_press(key):
-    global vx, vy, dyaw
-    try:
-        if key.char == '2': vx += 0.1
-        elif key.char == '3': vx -= 0.1
-        elif key.char == '4': vy += 0.1
-        elif key.char == '5': vy -= 0.1
-        elif key.char == '6': dyaw += 0.1
-        elif key.char == '7': dyaw -= 0.1
-        elif key.char == '`':
-            vx = 0.0
-            vy = 0.0
-            dyaw = 0.0
-
-        vx = np.clip(vx, -1.0, 2.0)
-        vy = np.clip(vy, -0.5, 0.5)
-        dyaw = np.clip(dyaw, -1.0, 1.0)
-    except AttributeError:
-        pass
-
-listener = Listener(on_press=on_press)
-listener.start()
-
 def run_mujoco(policy, cfg):
     model = mujoco.MjModel.from_xml_path(cfg.sim_config.mujoco_model_path)
     model.opt.timestep = cfg.sim_config.dt
@@ -67,12 +42,12 @@ def run_mujoco(policy, cfg):
     count_lowlevel = 0
 
     for _ in tqdm(range(int(cfg.sim_config.sim_duration / cfg.sim_config.dt)), desc="Simulating..."):
-        # Obtain an observation
-        q, dq, omega, euler = get_obs(data)
         # 1000hz -> 100hz
         force = [0, 0, 0]
+        vx, vy, dyaw = 0.0, 0.0, 0.0
         cmd = np.array([[vx, vy, dyaw]], dtype=np.float32)
-
+        # Obtain an observation
+        q, dq, omega, euler = get_obs(data)
         cycle_time = 0.8
         dt_phase = cfg.sim_config.dt / cycle_time
         phase = phase + dt_phase
@@ -116,12 +91,7 @@ def run_mujoco(policy, cfg):
         count_lowlevel += 1
     viewer.close()
 
-
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser(description='Deployment script.')
-    parser.add_argument('--terrain', action='store_true', help='terrain or plane')
-    args = parser.parse_args()
     class Sim2simCfg(g1Cfg):
         class sim_config:
             mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/g1/scene.xml'

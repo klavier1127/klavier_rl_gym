@@ -94,7 +94,15 @@ class x2Env(LeggedRobot):
     # ================================================ Rewards ================================================== #
     #####################     foot-pos    #################################################################
     def _reward_hip_pos(self):
-        return torch.sum(torch.square(self.dof_pos[:, [0,1,5,6]] - self.default_dof_pos[:, [0,1,5,6]]), dim=1)
+        error = 0.
+        error += self.sqrdexp(10. * (self.dof_pos[:, 0]))
+        error += self.sqrdexp(10. * (self.dof_pos[:, 1]))
+        error += self.sqrdexp(10. * (self.dof_pos[:, 5]))
+        error += self.sqrdexp(10. * (self.dof_pos[:, 6]))
+        return error / 4.
+
+    # def _reward_hip_pos(self):
+    #     return torch.sum(torch.square(self.dof_pos[:, [0,1,5,6]] - self.default_dof_pos[:, [0,1,5,6]]), dim=1)
 
     def _reward_ankle_pos(self):
         return torch.sum(torch.square(self.dof_pos[:, [4, 9]] - self.default_dof_pos[:, [4, 9]]), dim=1)
@@ -109,4 +117,14 @@ class x2Env(LeggedRobot):
     #     rew_feetHeight = torch.abs(self.feet_pos[:, :, 2] - self.cfg.rewards.base_feet_height - self.cfg.rewards.target_feet_height) < 0.01
     #     rew_feetHeight = torch.sum(rew_feetHeight * swing_mask, dim=1)
     #     return rew_feetHeight
+
+    # def _reward_orientation(self):
+    #     quat_mismatch = torch.exp(-torch.sum(torch.abs(self.base_euler_xyz[:, :2]), dim=1) * 10)
+    #     orientation = torch.exp(-torch.norm(self.projected_gravity[:, :2], dim=1) * 20)
+    #     return (quat_mismatch + orientation) / 2.
+    #
+    # def _reward_base_height(self):
+    #     contact_foot = torch.min(self.feet_pos[:, 0, 2], self.feet_pos[:, 1, 2])
+    #     base_height = self.root_states[:, 2] - (contact_foot - self.cfg.rewards.base_feet_height)
+    #     return torch.exp(-torch.abs(base_height - self.cfg.rewards.base_height_target) * 100)
 

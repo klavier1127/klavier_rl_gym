@@ -1,57 +1,13 @@
 import math
-from pynput import keyboard
 import numpy as np
 import mujoco, mujoco_viewer
 from tqdm import tqdm
 from collections import deque
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs.go2.go2_config import go2Cfg
-from legged_gym.utils import quat_to_euler, quat_to_grav, euler_to_grav
-
+from legged_gym.utils import quat_to_euler
 import torch
 
-
-
-class cmd:
-    vx = 0.0
-    vy = 0.0
-    dyaw = 0.0
-
-vx, vy, dyaw = 0.0, 0.0, 0.0
-def on_press(key):
-    global vx, vy, dyaw
-    try:
-        if key.char == '2':  # 向前
-            vx += 0.1
-        elif key.char == '3':  # 向后
-            vx -= 0.1
-        elif key.char == '4':  # 向左
-            vy += 0.1
-        elif key.char == '5':  # 向右
-            vy -= 0.1
-        elif key.char == '6':  # 逆时针旋转
-            dyaw += 0.1
-        elif key.char == '7':  # 顺时针旋转
-            dyaw -= 0.1
-        elif key.char == '`':
-            vx = 0.0
-            vy = 0.0
-            dyaw = 0.0
-
-        # 限制速度范围
-        vx = np.clip(vx, -1.0, 2.0)
-        vy = np.clip(vy, -0.5, 0.5)
-        dyaw = np.clip(dyaw, -1.0, 1.0)
-    except AttributeError:
-        pass
-
-# 启动键盘监听器
-listener = keyboard.Listener(on_press=on_press)
-listener.start()
-
-def smooth_sqr_wave(phase, cycle_time):
-    p = 2.*np.pi*phase * 1. / cycle_time
-    return np.sin(p) / (2*np.sqrt(np.sin(p)**2. + 0.2**2.)) + 1./2.
 
 def get_obs(data):
     '''Extracts an observation from the mujoco data structure
@@ -83,21 +39,16 @@ def run_mujoco(policy, cfg):
     hist_obs = deque()
     for _ in range(cfg.env.frame_stack):
         hist_obs.append(np.zeros([1, cfg.env.num_single_obs], dtype=np.double))
-    obs_history = deque()
-    for _ in range(cfg.env.o_h_frame_stack):
-        obs_history.append(np.zeros([1, cfg.env.num_single_obs], dtype=np.double))
-
     phase = 0
     count_lowlevel = 0
 
     for _ in tqdm(range(int(cfg.sim_config.sim_duration / cfg.sim_config.dt)), desc="Simulating..."):
-        # Obtain an observation
-        q, dq, omega, euler = get_obs(data)
-
         # 1000hz -> 100hz
         force = [0, 0, 0]
+        vx, vy, dyaw = 0.0, 0.0, 0.0
         cmd = np.array([[vx, vy, dyaw]], dtype=np.float32)
-
+        # Obtain an observation
+        q, dq, omega, euler = get_obs(data)
         cycle_time = 0.5
         dt_phase = cfg.sim_config.dt / cycle_time
         phase = phase + dt_phase
@@ -121,16 +72,11 @@ def run_mujoco(policy, cfg):
             obs = np.clip(obs, -cfg.normalization.clip_observations, cfg.normalization.clip_observations)
             hist_obs.append(obs)
             hist_obs.popleft()
-            obs_history.append(obs)
-            obs_history.popleft()
 
             policy_input = np.zeros([1, cfg.env.num_observations], dtype=np.float32)
             for i in range(cfg.env.frame_stack):
                 policy_input[0, i * cfg.env.num_single_obs: (i + 1) * cfg.env.num_single_obs] = hist_obs[i][0, :]
-            policy_input_history = np.zeros([1, cfg.env.num_obs_history], dtype=np.float32)
-            for i in range(cfg.env.o_h_frame_stack):
-                policy_input_history[0, i * cfg.env.num_single_obs: (i + 1) * cfg.env.num_single_obs] = obs_history[i][0, :]
-            action = policy(torch.tensor(policy_input), torch.tensor(policy_input_history)).detach().numpy()
+            action = policy(torch.tensor(policy_input)).detach().numpy()
             action = np.clip(action, -cfg.normalization.clip_actions, cfg.normalization.clip_actions)
             target_q = action * cfg.control.action_scale
 
@@ -150,15 +96,6 @@ def run_mujoco(policy, cfg):
 
 
 if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser(description='Deployment script.')
-    # parser.add_argument('--load_model', type=str, required=True,
-    #                     help='Run to load from.')
-    parser.add_argument('--terrain', action='store_true', help='terrain or plane')
-    args = parser.parse_args()
-
-
     class Sim2simCfg(go2Cfg):
         class sim_config:
             mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/go2/scene.xml'
@@ -169,12 +106,6 @@ if __name__ == '__main__':
             kps = np.array([40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40], dtype=np.double)
             kds = np.array([1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1], dtype=np.double)
             tau_limit = np.array([23.7, 23.7, 35.55, 23.7, 23.7, 35.55, 23.7, 23.7, 35.55, 23.7, 23.7, 35.55], dtype=np.double)
-            # tau_limit = 50000. * np.ones(12, dtype=np.double)
-
-
-    # model_path = "../logs/go2/exported/policies/policy_pia_example.pt"
     model_path = "../logs/go2/exported/policies/policy_gec.pt"
-    # model_path = "../logs/go2/exported/policies/policy_gru.pt"
-    # model_path = "../logs/go2/exported/policies/policy_lstm.pt"
     policy = torch.jit.load(model_path)
     run_mujoco(policy, Sim2simCfg())

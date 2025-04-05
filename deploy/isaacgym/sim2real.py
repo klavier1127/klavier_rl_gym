@@ -114,7 +114,7 @@ class Sim2Real(SimBase, DroidGrpcClient):
 
 if __name__ == '__main__':
     mode_path = f"{DEPLOY_ROOT_DIR}/logs/x2/exported/policies/policy_lstm.pt"
-    channel = insecure_channel('192.168.55.12:50051')
+    channel = insecure_channel('192.168.55.11:50051')
     policy = torch.jit.load(mode_path)
     mybot = Sim2Real(deploy_config, policy, channel)
     mybot.init_robot()

@@ -21,7 +21,6 @@ class SimBase(object):
         self.run_flag = True
         self.cfg = _cfg
         self.policy = _policy
-
         self.timestamp_ms = 0
         # joint target
         self.target_q = np.zeros(self.cfg.env.num_actions, dtype=np.double)

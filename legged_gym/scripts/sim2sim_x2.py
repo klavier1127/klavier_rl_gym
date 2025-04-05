@@ -9,15 +9,6 @@ from legged_gym.utils import quat_to_euler
 import torch
 
 
-class cmd:
-    vx = 0.0
-    vy = 0.0
-    dyaw = 0.0
-
-def smooth_sqr_wave(phase, cycle_time):
-    p = 2.*np.pi*phase * 1. / cycle_time
-    return np.sin(p) / (2*np.sqrt(np.sin(p)**2. + 0.2**2.)) + 1./2.
-
 def get_obs(data):
     q = data.qpos[7:]
     dq = data.qvel[6:]
@@ -39,10 +30,8 @@ def run_mujoco(policy, cfg):
     data.qpos[7:] = default_pos
     mujoco.mj_step(model, data)
     viewer = mujoco_viewer.MujocoViewer(model, data)
-
     target_q = np.zeros((cfg.env.num_actions), dtype=np.double)
     action = np.zeros((cfg.env.num_actions), dtype=np.double)
-
     hist_obs = deque()
     for _ in range(cfg.env.frame_stack):
         hist_obs.append(np.zeros([1, cfg.env.num_single_obs], dtype=np.double))
@@ -99,15 +88,6 @@ def run_mujoco(policy, cfg):
 
 
 if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser(description='Deployment script.')
-    # parser.add_argument('--load_model', type=str, required=True,
-    #                     help='Run to load from.')
-    parser.add_argument('--terrain', action='store_true', help='terrain or plane')
-    args = parser.parse_args()
-
-
     class Sim2simCfg(x2Cfg):
         class sim_config:
             mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/x2/scene.xml'
@@ -118,7 +98,6 @@ if __name__ == '__main__':
             kps = np.array([200, 200, 200, 200, 30,     200, 200, 200, 200, 30], dtype=np.double)
             kds = np.array([  4,   4,   4,   4,  4,       4,   4,   4,   4,  4], dtype=np.double)
             tau_limit = np.array([30, 45, 60, 60, 30,    30,  45,  60,  60,  30], dtype=np.double)
-
 
     model_path = "../logs/x2/exported/policies/policy_lstm.pt"
     policy = torch.jit.load(model_path)
