@@ -95,8 +95,8 @@ if __name__ == '__main__':
         class sim_config:
             mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/g1/scene.xml'
             sim_duration = 100.0
-            dt = 0.002
-            decimation = 10
+            dt = 0.001
+            decimation = 20
         class robot_config:
             kps = np.array([100, 100, 100, 150, 40, 40, 100, 100, 100, 150, 40, 40], dtype=np.double)
             kds = np.array([2, 2, 2, 4, 2, 2, 2, 2, 2, 4, 2, 2], dtype=np.double)

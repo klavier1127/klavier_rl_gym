@@ -160,8 +160,8 @@ class g1Cfg(LeggedRobotCfg):
 
         class scales:
             # feet pos
-            hip_pos = -2.
-            ankle_pos = -0.3
+            hip_pos = -2.0
+            ankle_pos = -1.0
             feet_contact = 0.5
             feet_air_time = -0.0
             feet_height = -10.
@@ -176,11 +176,11 @@ class g1Cfg(LeggedRobotCfg):
 
             # base pos
             default_dof_pos = -0.05
-            orientation = -1.
-            base_height = -1.
+            orientation = -3.
+            base_height = -3.
 
             # energy
-            action_rate = -0.01
+            action_rate = -0.03
             torques = -1e-5
             dof_vel = -1e-3
             dof_acc = -2.5e-7
