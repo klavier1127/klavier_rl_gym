@@ -7,8 +7,8 @@ class g1Cfg(LeggedRobotCfg):
         c_frame_stack = 1
         o_h_frame_stack = 25
 
-        num_single_obs = 46
-        num_single_critic_obs = 46 + 7# + 3
+        num_single_obs = 47
+        num_single_critic_obs = 47 + 7# + 3
         num_privileged_obs = 7# + 3
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)

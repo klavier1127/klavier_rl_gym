@@ -5,7 +5,7 @@ from tqdm import tqdm
 from collections import deque
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs.x2.x2_config import x2Cfg
-from legged_gym.utils import quat_to_euler
+from legged_gym.utils import quat_to_euler, quat_to_grav
 import torch
 
 
@@ -15,9 +15,8 @@ def get_obs(data):
     quat = data.qpos[3:7]
     quat = [quat[1], quat[2], quat[3], quat[0]]
     omega = data.qvel[3:6]
-    eu_ang = quat_to_euler(quat)
-    eu_ang[eu_ang > math.pi] -= 2 * math.pi
-    return q, dq, omega, eu_ang
+    proj_grav = quat_to_grav(quat)
+    return q, dq, omega, proj_grav
 
 def pd_control(default_dof_pos, target_q, q, kp, target_dq, dq, kd):
     return (target_q - q + default_dof_pos) * kp + (target_dq - dq) * kd
@@ -43,7 +42,7 @@ def run_mujoco(policy, cfg):
         vx, vy, dyaw = 0.0, 0.0, 0.0
         cmd = np.array([[vx, vy, dyaw]], dtype=np.float32)
         # Obtain an observation
-        q, dq, omega, euler = get_obs(data)
+        q, dq, omega, proj_grav = get_obs(data)
         cycle_time = 0.6
         dt_phase = cfg.sim_config.dt / cycle_time
         phase = phase + dt_phase
@@ -62,7 +61,7 @@ def run_mujoco(policy, cfg):
             obs[0, 15:25] = dq * 0.05 # dq * 0.05
             obs[0, 25:35] = action
             obs[0, 35:38] = omega*0.25
-            obs[0, 38:40] = euler[:2]
+            obs[0, 38:41] = proj_grav
 
             obs = np.clip(obs, -cfg.normalization.clip_observations, cfg.normalization.clip_observations)
             hist_obs.append(obs)

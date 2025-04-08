@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
 from .actor_critic import ActorCritic
-from legged_gym.algo.rollout_storage import RolloutStorage
+from .rollout_storage import RolloutStorage
 
 
 class PPO:

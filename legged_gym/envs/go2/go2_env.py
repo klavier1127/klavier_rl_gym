@@ -25,7 +25,7 @@ class go2Env(LeggedRobot):
         noise_vec[17: 29] = noise_scales.dof_vel * self.obs_scales.dof_vel
         noise_vec[29: 41] = 0.  # previous actions
         noise_vec[41: 44] = noise_scales.ang_vel * self.obs_scales.ang_vel
-        noise_vec[44: 46] = noise_scales.quat * self.obs_scales.quat  # euler x,y
+        noise_vec[44: 47] = noise_scales.quat * self.obs_scales.quat  # euler x,y
         return noise_vec
 
     def _get_contact_mask(self):
@@ -86,7 +86,7 @@ class go2Env(LeggedRobot):
             dq,
             self.actions,
             self.base_ang_vel * self.obs_scales.ang_vel,
-            self.base_euler_xyz[:, :2] * self.obs_scales.quat,
+            self.projected_gravity * self.obs_scales.quat,
         ), dim=-1)
 
         self.critic_obs = torch.cat((

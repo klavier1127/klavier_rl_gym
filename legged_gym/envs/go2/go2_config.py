@@ -7,10 +7,9 @@ class go2Cfg(LeggedRobotCfg):
         c_frame_stack = 1
         o_h_frame_stack = 25
 
-        num_single_obs = 46
-        num_single_critic_obs = 54# + 9
+        num_single_obs = 47
+        num_single_critic_obs = 55# + 9
         num_privileged_obs = 8
-        num_env_obs = 15
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)

@@ -883,7 +883,7 @@ class LeggedRobot(BaseTask):
 
     def _reward_orientation(self):
         error = torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1)
-        error += torch.sum(torch.square(self.base_euler_xyz[:, :2]), dim=1)
+        # error += torch.sum(torch.square(self.base_euler_xyz[:, :2]), dim=1)
         return error
 
     def _reward_base_height(self):
@@ -942,7 +942,7 @@ class LeggedRobot(BaseTask):
         error1 = torch.sum(torch.square(self.last_actions - self.actions), dim=1)
         error2 = torch.sum(torch.square(self.actions + self.last_last_actions - 2 * self.last_actions), dim=1)
         error3 = 0.05 * torch.sum(torch.abs(self.actions), dim=1)
-        return error1 + error2 + error3
+        return error1# + error2 + error3
 
     def _reward_dof_pos_limits(self):
         # Penalize dof positions too close to the limit

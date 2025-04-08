@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from .actor_critic import ActorCritic
-from legged_gym.algo.rollout_storage import RolloutStorage
+from .rollout_storage import RolloutStorage
 
 
 class PPO:
@@ -94,7 +94,7 @@ class PPO:
         generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
         for (obs_batch, critic_obs_batch, privileged_obs_batch, obs_history_batch, actions_batch,
              target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch,
-                old_mu_batch, old_sigma_batch, hid_states_batch, masks_batch, dones_batch) in generator:
+                old_mu_batch, old_sigma_batch, dones_batch) in generator:
 
                 self.actor_critic.act(obs_batch)
                 actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)

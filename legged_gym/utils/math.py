@@ -64,12 +64,13 @@ def quat_to_euler(quat):
     return np.array([roll_x, pitch_y, yaw_z])
 
 def quat_to_grav(q):
-    v = [0, 0, -1]
-    q_w = q[-1]
-    q_vec = q[:3]
-    a = v * np.expand_dims(2.0 * q_w ** 2 - 1.0, axis=-1)
-    b = np.cross(q_vec, v) * np.expand_dims(q_w, axis=-1) * 2.0
-    c = q_vec * np.expand_dims(np.sum(q_vec * v, axis=-1), axis=-1) * 2.0
+    q = np.asarray(q)
+    v = np.array([0, 0, -1], dtype=np.float32)
+    q_w = q[..., -1]
+    q_vec = q[..., :3]
+    a = v * (2.0 * q_w ** 2 - 1.0)[..., np.newaxis]
+    b = 2.0 * q_w[..., np.newaxis] * np.cross(q_vec, v)
+    c = 2.0 * q_vec * np.sum(q_vec * v, axis=-1)[..., np.newaxis]
     return a - b + c
 
 

@@ -19,7 +19,7 @@ class x2Env(LeggedRobot):
         noise_vec[15: 25] = noise_scales.dof_vel * self.obs_scales.dof_vel
         noise_vec[25: 35] = 0.  # previous actions
         noise_vec[35: 38] = noise_scales.ang_vel * self.obs_scales.ang_vel
-        noise_vec[38: 40] = noise_scales.quat * self.obs_scales.quat  # euler x,y
+        noise_vec[38: 41] = noise_scales.quat * self.obs_scales.quat  # euler x,y
         return noise_vec
 
     def _get_walk_mask(self):
@@ -61,7 +61,7 @@ class x2Env(LeggedRobot):
             self.dof_vel * self.obs_scales.dof_vel,
             self.actions,
             self.base_ang_vel * self.obs_scales.ang_vel,
-            self.base_euler_xyz[:, :2] * self.obs_scales.quat,
+            self.projected_gravity * self.obs_scales.quat,
         ), dim=-1)
 
         self.critic_obs = torch.cat((
