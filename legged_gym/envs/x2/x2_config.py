@@ -4,12 +4,12 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 class x2Cfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
         frame_stack = 15
-        c_frame_stack = 15
+        c_frame_stack = 3
         o_h_frame_stack = 25
 
         num_single_obs = 41
-        num_single_critic_obs = 41 + 7# + 3
-        num_privileged_obs = 7# + 3
+        num_privileged_obs = 55
+        num_single_critic_obs = num_single_obs + num_privileged_obs
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)

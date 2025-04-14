@@ -37,8 +37,8 @@ class deploy_config:
         clip_observations = 20.
 
     class robot_config:
-        default_dof_pos = np.array([0, 0.05, 0.3, -0.6, 0.3,
-                                          0, 0.05, 0.3, -0.6, 0.3,
+        default_dof_pos = np.array([0, 0.0, 0.3, -0.6, 0.3,
+                                          0, 0.0, 0.3, -0.6, 0.3,
                                                                    -0.3, 0.1, 0, 1.5,
                                                                    -0.3, 0.1, 0, 1.5], dtype=np.double)
 

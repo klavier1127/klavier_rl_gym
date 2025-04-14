@@ -126,7 +126,7 @@ class ActorCritic(nn.Module):
 
     # ----------- Training ---------------
     def get_student_latent(self, obs_history):
-        return self.adaptation_module.forward(obs_history)
+        return self.adaptation_module(obs_history)
 
     def get_expert_latent(self, obs, privileged_obs):
-        return self.expert_encoder.forward(obs, privileged_obs)
+        return self.expert_encoder(obs, privileged_obs)

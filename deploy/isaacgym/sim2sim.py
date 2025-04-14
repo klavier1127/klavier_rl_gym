@@ -69,7 +69,6 @@ class Sim2Sim(SimBase):
                 obs[0, 25:35] = self.action
                 obs[0, 35:38] = omega * 0.25
                 obs[0, 38:41] = proj_grav
-                # obs[0, 42:45] = proj_grav
                 self.target_q = self.get_action(obs)  # 策略推理
                 # self.target_q = self.ref_trajectory(cnt_pd_loop)  # 参考轨迹可视化，需要将xml中的<freejoint/>注释掉，将机器人挂起来
                 now = time.perf_counter()

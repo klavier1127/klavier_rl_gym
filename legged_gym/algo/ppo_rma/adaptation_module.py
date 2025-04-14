@@ -1,6 +1,5 @@
 import torch.nn as nn
 import torch
-from ..utils.torch_utils import get_activation,check_cnnoutput
 
 
 class MLPExpertEncoder(nn.Module):
@@ -36,65 +35,7 @@ class MLPExpertEncoder(nn.Module):
         return output
 
 
-class TCNHistoryEncoder(nn.Module):
-    def __init__(self, 
-                 num_obs,
-                 num_history,
-                 num_latent,
-                 activation = nn.ELU(),):
-        super(TCNHistoryEncoder, self).__init__()
-        self.num_obs = num_obs
-        self.num_history = num_history  
-        self.num_latent = num_latent    
 
-        self.tsteps = tsteps = num_history
-        input_size = num_obs
-        output_size = num_latent
-        self.encoder = nn.Sequential(
-            nn.Linear(input_size, 128),
-            activation,
-            nn.Linear(128, 32),
-        )
-        if tsteps == 50:
-            self.conv_layers = nn.Sequential(
-                    nn.Conv1d(in_channels = 32, out_channels = 32, kernel_size = 8, stride = 4), nn.LeakyReLU(),
-                    nn.Conv1d(in_channels = 32, out_channels = 32, kernel_size = 5, stride = 1), nn.LeakyReLU(),
-                    nn.Conv1d(in_channels = 32, out_channels = 32, kernel_size = 5, stride = 1), nn.LeakyReLU(), nn.Flatten())
-            last_dim = 32 * 3
-        elif tsteps == 10:
-            self.conv_layers = nn.Sequential(
-                nn.Conv1d(in_channels = 32, out_channels = 32, kernel_size = 4, stride = 2), nn.LeakyReLU(), 
-                nn.Conv1d(in_channels = 32, out_channels = 32, kernel_size = 2, stride = 1), nn.LeakyReLU(), 
-                nn.Flatten())
-            last_dim = 32 * 3
-        elif tsteps == 20:
-            self.conv_layers = nn.Sequential(
-                nn.Conv1d(in_channels = 32, out_channels = 32, kernel_size = 6, stride = 2), nn.LeakyReLU(), 
-                nn.Conv1d(in_channels = 32, out_channels = 32, kernel_size = 4, stride = 2), nn.LeakyReLU(), 
-                nn.Flatten())
-            last_dim = 32 * 3
-        else:
-            self.conv_layers = nn.Sequential(
-                nn.Conv1d(in_channels = 32, out_channels = 32, kernel_size = 4, stride = 2), nn.LeakyReLU(), 
-                nn.Conv1d(in_channels = 32, out_channels = 32, kernel_size = 2, stride = 1), nn.LeakyReLU(), 
-                nn.Flatten())
-            last_dim = check_cnnoutput(input_size = (tsteps,32), list_modules = [self.conv_layers])
-
-        self.linear_output = nn.Sequential(
-            nn.Linear(last_dim, output_size)
-            )
-
-    def forward(self, obs_history):
-        """
-        obs_history.shape = (bz, T , obs_dim)
-        """
-        bs = obs_history.shape[0]
-        T = self.tsteps
-        projection = self.encoder(obs_history) # (bz, T , 32) -> (bz, 32, T) bz, channel_dim, Temporal_dim
-        output = self.conv_layers(projection.permute(0, 2, 1)) # (bz, last_dim)
-        output = self.linear_output(output)
-        return output
-    
 
 class MLPHistoryEncoder(nn.Module):
     def __init__(self,

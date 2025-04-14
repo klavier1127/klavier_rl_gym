@@ -135,7 +135,7 @@ def handle(state):
 if __name__ == '__main__':
     handler = GamepadHandler()
     threading.Thread(target=handler.listen, args=(handle,), daemon=True).start()
-    mode_path = f"{DEPLOY_ROOT_DIR}/logs/x2/exported/policies/policy_mlp.pt"
+    mode_path = f"{DEPLOY_ROOT_DIR}/logs/x2/exported/policies/policy_rma.pt"
     channel = insecure_channel('192.168.55.10:50051')
     policy = torch.jit.load(mode_path)
     mybot = Sim2Real(deploy_config, policy, channel)

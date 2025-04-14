@@ -43,6 +43,18 @@ class x2Env(LeggedRobot):
             self.base_lin_vel * self.obs_scales.lin_vel,
             (self.root_states[:, 2].unsqueeze(1) - self.feet_pos[:, :, 2] - self.cfg.rewards.base_height_target) * 10.,
             self.contacts,
+
+            # 55
+            self.body_mass,
+            self.base_com,
+            self.env_frictions,
+            self.kp_factor,
+            self.kd_factor,
+            self.motor_offset,
+            self.motor_strength,
+            self.joint_friction_coeffs,
+            self.joint_damping_coeffs,
+            self.joint_armatures,
         ), dim=-1)
         if self.cfg.terrain.measure_heights:
             self.privileged_obs = torch.cat((
