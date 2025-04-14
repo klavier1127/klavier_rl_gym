@@ -82,8 +82,8 @@ class x2Env(LeggedRobot):
     def get_privileged_observations(self):
         noise_vec = torch.zeros(self.cfg.env.num_privileged_obs, device=self.device)
         noise_vec[0: 3] = 0.0# 0.1   # lin_vel
-        noise_vec[3: 4] = 0.0#0.02  # base_z
-        noise_vec[4: 6] = 0.0#0.2   # contact
+        noise_vec[3: 5] = 0.0#0.02  # feet_heights
+        noise_vec[5: 7] = 0.0#0.2   # contact
         self.privileged_obs_buf = self.privileged_obs.clone() + (2 * torch.rand_like(self.privileged_obs) -1) * noise_vec * self.cfg.noise.noise_level
         return self.privileged_obs_buf
 

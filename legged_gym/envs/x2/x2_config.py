@@ -110,7 +110,7 @@ class x2Cfg(LeggedRobotCfg):
         friction_range = [0.5, 1.5]
         randomize_base_mass = True
         added_mass_range = [-5., 5.]
-        randomize_all_mass = False
+        randomize_all_mass = True
         rd_mass_range = [0.5, 1.5]
         randomize_all_com = True
         rd_com_range = [-0.03, 0.03]
