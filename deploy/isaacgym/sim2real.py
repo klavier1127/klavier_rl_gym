@@ -9,6 +9,7 @@ from deploy.base.SimBase import SimBase
 from deploy.base.SimBase import NanoSleep
 from grpc import insecure_channel
 from deploy.base.DroidGrpcClient import DroidGrpcClient
+from legged_gym.utils import euler_to_grav
 
 
 class Sim2Real(SimBase, DroidGrpcClient):
@@ -53,7 +54,8 @@ class Sim2Real(SimBase, DroidGrpcClient):
         omega = np.array(self.robotState.imu_gyro)
         euler = np.array(self.robotState.imu_euler)
         euler[euler > math.pi] -= 2 * math.pi
-        return q, dq, omega, euler
+        proj_grav = euler_to_grav(euler)
+        return q, dq, omega, proj_grav
 
     def run(self):
         pre_tic = 0
@@ -70,7 +72,7 @@ class Sim2Real(SimBase, DroidGrpcClient):
             phase = torch.tensor(cnt_pd_loop * self.cfg.sim_config.dt / cycle_time)
             phase_sin = np.sin(2 * math.pi * phase)
             phase_cos = np.cos(2 * math.pi * phase)
-            q, dq, omega, eu_ang = self.get_obs()
+            q, dq, omega, proj_grav = self.get_obs()
 
             obs = np.zeros([1, self.cfg.env.num_single_obs], dtype=np.float32)
             obs[0, 0] = phase_sin
@@ -82,7 +84,7 @@ class Sim2Real(SimBase, DroidGrpcClient):
             obs[0, 15:25] = dq * 0.05
             obs[0, 25:35] = self.action
             obs[0, 35:38] = omega * 0.25
-            obs[0, 38:40] = eu_ang[:2]
+            obs[0, 38:41] = proj_grav
 
             self.target_q = self.get_action(obs)
             # self.target_q[0]=0
@@ -113,7 +115,7 @@ class Sim2Real(SimBase, DroidGrpcClient):
 
 
 if __name__ == '__main__':
-    mode_path = f"{DEPLOY_ROOT_DIR}/logs/x2/exported/policies/policy_lstm.pt"
+    mode_path = f"{DEPLOY_ROOT_DIR}/logs/x2/exported/policies/policy_mlp.pt"
     channel = insecure_channel('192.168.55.11:50051')
     policy = torch.jit.load(mode_path)
     mybot = Sim2Real(deploy_config, policy, channel)

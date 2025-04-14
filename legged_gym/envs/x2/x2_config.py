@@ -150,7 +150,7 @@ class x2Cfg(LeggedRobotCfg):
         soft_torque_limit = 0.8
         base_height_target = 0.86
         base_feet_height = 0.09
-        target_feet_height = 0.10 # m
+        target_feet_height = 0.08 # m
         cycle_time = 0.6 # sec
         target_air_time = 0.3
 

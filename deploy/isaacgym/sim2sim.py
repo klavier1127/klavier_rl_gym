@@ -9,7 +9,7 @@ from deploy import DEPLOY_ROOT_DIR
 from deploy_config import deploy_config
 from deploy.base.SimBase import SimBase
 from deploy.base.SimBase import NanoSleep
-from deploy.utils.math_utils import quat_to_euler
+from deploy.utils.math_utils import quat_to_grav
 
 
 class Sim2Sim(SimBase):
@@ -26,12 +26,11 @@ class Sim2Sim(SimBase):
     def get_obs(self):
         q = self.data.qpos[7:]
         dq = self.data.qvel[6:]
+        omega = self.data.qvel[3:6]
         quat = self.data.qpos[3:7]
         quat = [quat[1], quat[2], quat[3], quat[0]]
-        omega = self.data.qvel[3:6]
-        eu_ang = quat_to_euler(quat)
-        eu_ang[eu_ang > math.pi] -= 2 * math.pi
-        return q, dq, omega, eu_ang
+        proj_grav = quat_to_grav(quat)
+        return q, dq, omega, proj_grav
 
     def set_sim_target(self, target_q):
         q = self.data.qpos.astype(np.double)[-self.cfg.env.num_actions:]
@@ -50,7 +49,7 @@ class Sim2Sim(SimBase):
         for _ in pbar:
             start_time = time.perf_counter()
             # Obtain an observation
-            q, dq, omega, euler = self.get_obs()
+            q, dq, omega, proj_grav = self.get_obs()
 
             cycle_time = 0.6
             dt_phase = self.cfg.sim_config.dt / cycle_time
@@ -69,7 +68,7 @@ class Sim2Sim(SimBase):
                 obs[0, 15:25] = dq * 0.05
                 obs[0, 25:35] = self.action
                 obs[0, 35:38] = omega * 0.25
-                obs[0, 38:40] = euler[:2]
+                obs[0, 38:41] = proj_grav
                 # obs[0, 42:45] = proj_grav
                 self.target_q = self.get_action(obs)  # 策略推理
                 # self.target_q = self.ref_trajectory(cnt_pd_loop)  # 参考轨迹可视化，需要将xml中的<freejoint/>注释掉，将机器人挂起来
@@ -106,7 +105,7 @@ class Sim2Sim(SimBase):
             self.target_q[idx] = final_goal[idx]
 
 if __name__ == '__main__':
-    mode_path = f"{DEPLOY_ROOT_DIR}/logs/x2/exported/policies/policy_lstm.pt"
+    mode_path = f"{DEPLOY_ROOT_DIR}/logs/x2/exported/policies/policy_mlp.pt"
     policy = torch.jit.load(mode_path)
     mybot = Sim2Sim(deploy_config, policy)
     mybot.init_robot()

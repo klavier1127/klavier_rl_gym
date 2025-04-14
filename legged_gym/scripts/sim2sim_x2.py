@@ -98,6 +98,6 @@ if __name__ == '__main__':
             kds = np.array([  4,   4,   4,   4,  4,       4,   4,   4,   4,  4], dtype=np.double)
             tau_limit = np.array([30, 45, 60, 60, 30,    30,  45,  60,  60,  30], dtype=np.double)
 
-    model_path = "../logs/x2/exported/policies/policy_lstm.pt"
+    model_path = "../logs/x2/exported/policies/policy_mlp.pt"
     policy = torch.jit.load(model_path)
     run_mujoco(policy, Sim2simCfg())

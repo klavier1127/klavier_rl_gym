@@ -34,6 +34,16 @@ def quat_rotate_inverse(q, v):
     c = q_vec * np.expand_dims(np.sum(q_vec * v, axis=-1), axis=-1) * 2.0
     return a - b + c
 
+def quat_to_grav(q):
+    q = np.asarray(q)
+    v = np.array([0, 0, -1], dtype=np.float32)
+    q_w = q[..., -1]
+    q_vec = q[..., :3]
+    a = v * (2.0 * q_w ** 2 - 1.0)[..., np.newaxis]
+    b = 2.0 * q_w[..., np.newaxis] * np.cross(q_vec, v)
+    c = 2.0 * q_vec * np.sum(q_vec * v, axis=-1)[..., np.newaxis]
+    return a - b + c
+
 def smooth_sqr_wave(phase, cycle_time):
     p = 2.*np.pi*phase * 1. / cycle_time
     return np.sin(p) / (2*np.sqrt(np.sin(p)**2. + 0.2**2.)) + 1./2.

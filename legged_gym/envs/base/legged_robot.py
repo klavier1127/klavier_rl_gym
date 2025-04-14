@@ -862,7 +862,7 @@ class LeggedRobot(BaseTask):
 
 
     # ================================================ Rewards ================================================== #
-    ################################# feet pos ##################################################
+    ############################# feet pos ##################################################
     def _reward_feet_height(self):
         contact_foot = torch.min(self.feet_pos[:, 0, 2], self.feet_pos[:, 1, 2])
         swing_foot = torch.max(self.feet_pos[:, 0, 2], self.feet_pos[:, 1, 2])

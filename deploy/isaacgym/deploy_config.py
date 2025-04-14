@@ -5,9 +5,9 @@ from deploy import DEPLOY_ROOT_DIR
 class deploy_config:
     class env:
         # change the observation dim
-        frame_stack = 1
+        frame_stack = 15
         o_h_frame_stack = 25
-        num_single_obs = 40
+        num_single_obs = 41
         num_observations = int(frame_stack * num_single_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)
         num_actions = 10
@@ -25,7 +25,7 @@ class deploy_config:
     class control:
         action_scale = 0.25
         decimation = 20
-        cycle_time = 0.7
+        cycle_time = 0.6
 
     class normalization:
         class obs_scales:
