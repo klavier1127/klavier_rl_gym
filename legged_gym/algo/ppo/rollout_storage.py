@@ -1,5 +1,4 @@
 import torch
-from legged_gym.algo.utils import split_and_pad_trajectories
 
 
 class RolloutStorage:

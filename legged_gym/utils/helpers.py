@@ -6,6 +6,7 @@ import random
 from isaacgym import gymapi
 from isaacgym import gymutil
 
+
 def class_to_dict(obj) -> dict:
     if not hasattr(obj, "__dict__"):
         return obj
@@ -22,7 +23,6 @@ def class_to_dict(obj) -> dict:
             element = class_to_dict(val)
         result[key] = element
     return result
-
 
 def update_class_from_dict(obj, dict):
     for key, val in dict.items():

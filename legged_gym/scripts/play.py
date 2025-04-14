@@ -1,17 +1,8 @@
 import os
-import cv2
-import numpy as np
-from isaacgym import gymapi
 from legged_gym import LEGGED_GYM_ROOT_DIR
-
-# import isaacgym
 from legged_gym.envs import *
 from legged_gym.utils import get_args, export_policy_as_jit, task_registry, Logger
-from isaacgym.torch_utils import *
-
-import torch
 from tqdm import tqdm
-from datetime import datetime
 
 
 def play(args):
@@ -76,6 +67,6 @@ def play(args):
 if __name__ == '__main__':
     EXPORT_POLICY = True
     RENDER = True
-    FIX_COMMAND = True
+    FIX_COMMAND = False
     args = get_args()
     play(args)

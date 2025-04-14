@@ -6,7 +6,6 @@ from typing import Tuple, Union
 import json 
 import numpy as np 
 
-# minimal interface of the environment
 
 
 def check_cnnoutput(input_size:list, list_modules):

@@ -1,15 +1,10 @@
-#  Copyright 2021 ETH Zurich, NVIDIA CORPORATION
-#  SPDX-License-Identifier: BSD-3-Clause
-
-from __future__ import annotations
-
 from typing import Tuple
-
 import git
 import os
 import pathlib
 import torch
 import numpy as np
+
 
 _EPS = np.finfo(float).eps * 4.0
 

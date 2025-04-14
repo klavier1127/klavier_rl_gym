@@ -12,9 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 class OnPolicyRunner:
-
     def __init__(self, env: VecEnv, train_cfg, log_dir=None, device="cpu"):
-
         self.cfg = train_cfg["runner"]
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]

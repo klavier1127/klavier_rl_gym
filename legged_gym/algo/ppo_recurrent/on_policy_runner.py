@@ -5,7 +5,6 @@ from collections import deque
 import statistics
 from torch.utils.tensorboard import SummaryWriter
 import torch
-
 from .ppo import PPO
 from .actor_critic import ActorCritic
 from legged_gym.algo.vec_env import VecEnv

@@ -1,13 +1,9 @@
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
-from isaacgym.torch_utils import *
-from isaacgym import gymtorch, gymapi
-import torch
 from legged_gym.envs import LeggedRobot
-from legged_gym.utils.terrain import HumanoidTerrain, Terrain
+import torch
 
 
 class go2Env(LeggedRobot):
-
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
 

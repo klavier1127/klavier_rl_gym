@@ -3,7 +3,7 @@ from isaacgym import gymtorch, gymapi, gymutil
 from collections import deque
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs.base.base_task import BaseTask
-from legged_gym.utils.math import quat_apply_yaw, wrap_to_pi, torch_rand_sqrt_float, get_euler_xyz_tensor
+from legged_gym.utils.math import quat_apply_yaw, wrap_to_pi, get_euler_xyz_tensor
 from legged_gym.utils.helpers import class_to_dict
 from .legged_robot_config import LeggedRobotCfg
 from legged_gym.utils.terrain import Terrain
@@ -39,22 +39,6 @@ class LeggedRobot(BaseTask):
         self._init_buffers()
         self._prepare_reward_function()
         self.init_done = True
-
-    def _push_robots(self):
-        """ Random pushes the robots. Emulates an impulse by setting a randomized base velocity.
-        """
-        max_vel = self.cfg.domain_rand.max_push_vel_xy
-        max_push_angular = self.cfg.domain_rand.max_push_ang_vel
-        self.rand_push_force[:, :2] = torch_rand_float(
-            -max_vel, max_vel, (self.num_envs, 2), device=self.device)  # lin vel x/y
-        self.root_states[:, 7:9] = self.rand_push_force[:, :2]
-
-        self.rand_push_torque = torch_rand_float(
-            -max_push_angular, max_push_angular, (self.num_envs, 3), device=self.device)
-
-        self.root_states[:, 10:13] = self.rand_push_torque
-        self.gym.set_actor_root_state_tensor(
-            self.sim, gymtorch.unwrap_tensor(self.root_states))
 
     def step(self, actions):
         clip_actions = self.cfg.normalization.clip_actions
@@ -107,7 +91,6 @@ class LeggedRobot(BaseTask):
         self.check_termination()
         self.compute_reward()
         env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
-
         self.reset_idx(env_ids)
         self.compute_observations() # in some cases a simulation step might be required to refresh some obs (for example body positions)
 
@@ -124,7 +107,7 @@ class LeggedRobot(BaseTask):
         """ Check if environments need to be reset
         """
         self.reset_buf = torch.any(torch.norm(self.contact_forces[:, self.termination_contact_indices, :], dim=-1) > 1., dim=1)
-        self.reset_buf |= torch.logical_or(torch.abs(self.base_euler_xyz[:, 0]) > 0.5, torch.abs(self.base_euler_xyz[:, 1]) > 0.5)
+        self.reset_buf |= torch.logical_or(torch.abs(self.base_euler_xyz[:, 0]) > 0.8, torch.abs(self.base_euler_xyz[:, 1]) > 1.0)
         self.time_out_buf = self.episode_length_buf > self.max_episode_length  # no terminal reward for time-outs
         self.reset_buf |= self.time_out_buf
 
@@ -382,7 +365,6 @@ class LeggedRobot(BaseTask):
         if self.cfg.domain_rand.push_robots and  (self.common_step_counter % self.cfg.domain_rand.push_interval == 0):
             self._push_robots()
 
-
     def _resample_commands(self, env_ids):
         """ Randommly select commands of some environments
 
@@ -449,9 +431,18 @@ class LeggedRobot(BaseTask):
             self.root_states[env_ids, 7:13] = 0
             self.root_states[env_ids, 2] += 1.8
         env_ids_int32 = env_ids.to(dtype=torch.int32)
-        self.gym.set_actor_root_state_tensor_indexed(self.sim,
-                                                     gymtorch.unwrap_tensor(self.root_states),
-                                                     gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
+        self.gym.set_actor_root_state_tensor_indexed(self.sim, gymtorch.unwrap_tensor(self.root_states), gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
+
+    def _push_robots(self):
+        """ Random pushes the robots. Emulates an impulse by setting a randomized base velocity.
+        """
+        max_vel = self.cfg.domain_rand.max_push_vel_xy
+        max_push_angular = self.cfg.domain_rand.max_push_ang_vel
+        self.rand_push_force[:, :2] = torch_rand_float(-max_vel, max_vel, (self.num_envs, 2), device=self.device)  # lin vel x/y
+        self.root_states[:, 7:9] = self.rand_push_force[:, :2]
+        self.rand_push_torque = torch_rand_float(-max_push_angular, max_push_angular, (self.num_envs, 3), device=self.device)
+        self.root_states[:, 10:13] = self.rand_push_torque
+        self.gym.set_actor_root_state_tensor(self.sim, gymtorch.unwrap_tensor(self.root_states))
 
     def _update_terrain_curriculum(self, env_ids):
         """ Implements the game-inspired curriculum.
@@ -559,12 +550,10 @@ class LeggedRobot(BaseTask):
                 self.d_gains[:, i] = 0.
                 print(f"PD gain of joint {name} were not defined, setting them to zero")
 
-        self.rand_push_force = torch.zeros((self.num_envs, 3), dtype=torch.float32, device=self.device)
-        self.last_rand_push_force = torch.zeros((self.num_envs, 3), dtype=torch.float32, device=self.device)
-        self.rand_push_torque = torch.zeros((self.num_envs, 3), dtype=torch.float32, device=self.device)
         self.default_dof_pos = self.default_dof_pos.unsqueeze(0)
+        self.rand_push_force = torch.zeros((self.num_envs, 3), dtype=torch.float32, device=self.device)
+        self.rand_push_torque = torch.zeros((self.num_envs, 3), dtype=torch.float32, device=self.device)
 
-        self.default_joint_pd_target = self.default_dof_pos.clone()
         self.obs_history = deque(maxlen=self.cfg.env.o_h_frame_stack)
         self.critic_history = deque(maxlen=self.cfg.env.c_frame_stack)
 
