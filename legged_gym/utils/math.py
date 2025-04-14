@@ -28,10 +28,12 @@ def torch_rand_sqrt_float(lower, upper, shape, device):
     return (upper - lower) * r + lower
 
 def get_scale_shift(range):
-    # scale = 2. / (range[1] - range[0])
     scale = 2. / (range[1] - range[0]) if range[1] != range[0] else 1.
     shift = (range[1] + range[0]) / 2.
     return scale, shift
+
+def min_max_normalize(value, min_val, max_val):
+    return (value - min_val) / (max_val - min_val)
 
 def get_euler_xyz_tensor(quat):
     r, p, w = get_euler_xyz(quat)

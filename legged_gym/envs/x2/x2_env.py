@@ -2,6 +2,8 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
 from legged_gym.envs import LeggedRobot
 import torch
 
+from legged_gym.utils import min_max_normalize
+
 
 class x2Env(LeggedRobot):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
@@ -45,16 +47,16 @@ class x2Env(LeggedRobot):
             self.contacts,
 
             # 55
-            self.body_mass,
-            self.base_com,
-            self.env_frictions,
-            self.kp_factor,
-            self.kd_factor,
-            self.motor_offset,
-            self.motor_strength,
-            self.joint_friction_coeffs,
-            self.joint_damping_coeffs,
-            self.joint_armatures,
+            min_max_normalize(self.body_mass, self.cfg.domain_rand.added_mass_range[0], self.cfg.domain_rand.added_mass_range[1]),
+            min_max_normalize(self.base_com, self.cfg.domain_rand.added_com_range[0], self.cfg.domain_rand.added_com_range[1]),
+            min_max_normalize(self.env_frictions, self.cfg.domain_rand.friction_range[0], self.cfg.domain_rand.friction_range[1]),
+            min_max_normalize(self.kp_factor, self.cfg.domain_rand.Kp_factor_range[0], self.cfg.domain_rand.Kp_factor_range[1]),
+            min_max_normalize(self.kd_factor, self.cfg.domain_rand.Kd_factor_range[0], self.cfg.domain_rand.Kd_factor_range[1]),
+            min_max_normalize(self.motor_offset, self.cfg.domain_rand.motor_offset_range[0], self.cfg.domain_rand.motor_offset_range[1]),
+            min_max_normalize(self.motor_strength, self.cfg.domain_rand.motor_strength_range[0], self.cfg.domain_rand.motor_strength_range[1]),
+            min_max_normalize(self.joint_friction_coeffs, self.cfg.domain_rand.joint_friction_range[0], self.cfg.domain_rand.joint_friction_range[1]),
+            min_max_normalize(self.joint_damping_coeffs, self.cfg.domain_rand.joint_damping_range[0], self.cfg.domain_rand.joint_damping_range[1]),
+            min_max_normalize(self.joint_armatures, self.cfg.domain_rand.joint_armature_range[0], self.cfg.domain_rand.joint_armature_range[1]),
         ), dim=-1)
         if self.cfg.terrain.measure_heights:
             self.privileged_obs = torch.cat((
