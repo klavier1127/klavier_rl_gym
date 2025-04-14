@@ -105,7 +105,7 @@ class Sim2Sim(SimBase):
             self.target_q[idx] = final_goal[idx]
 
 if __name__ == '__main__':
-    mode_path = f"{DEPLOY_ROOT_DIR}/logs/x2/exported/policies/policy_mlp.pt"
+    mode_path = f"{DEPLOY_ROOT_DIR}/logs/x2/exported/policies/policy_rma.pt"
     policy = torch.jit.load(mode_path)
     mybot = Sim2Sim(deploy_config, policy)
     mybot.init_robot()

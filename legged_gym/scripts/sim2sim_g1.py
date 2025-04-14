@@ -36,6 +36,9 @@ def run_mujoco(policy, cfg):
     hist_obs = deque()
     for _ in range(cfg.env.frame_stack):
         hist_obs.append(np.zeros([1, cfg.env.num_single_obs], dtype=np.double))
+    obs_history = deque()
+    for _ in range(cfg.env.o_h_frame_stack):
+        obs_history.append(np.zeros([1, cfg.env.num_single_obs], dtype=np.double))
 
     phase = 0
     count_lowlevel = 0
@@ -70,11 +73,16 @@ def run_mujoco(policy, cfg):
             obs = np.clip(obs, -cfg.normalization.clip_observations, cfg.normalization.clip_observations)
             hist_obs.append(obs)
             hist_obs.popleft()
+            obs_history.append(obs)
+            obs_history.popleft()
 
             policy_input = np.zeros([1, cfg.env.num_observations], dtype=np.float32)
             for i in range(cfg.env.frame_stack):
                 policy_input[0, i * cfg.env.num_single_obs: (i + 1) * cfg.env.num_single_obs] = hist_obs[i][0, :]
-            action = policy(torch.tensor(policy_input)).detach().numpy()
+            policy_input_history = np.zeros([1, cfg.env.num_obs_history], dtype=np.float32)
+            for i in range(cfg.env.o_h_frame_stack):
+                policy_input_history[0, i * cfg.env.num_single_obs: (i + 1) * cfg.env.num_single_obs] = obs_history[i][0, :]
+            action = policy(torch.tensor(policy_input), torch.tensor(policy_input_history)).detach().numpy()
             action = np.clip(action, -cfg.normalization.clip_actions, cfg.normalization.clip_actions)
             target_q = action * cfg.control.action_scale
 

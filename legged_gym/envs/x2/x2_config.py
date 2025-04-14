@@ -204,8 +204,8 @@ class x2Cfg(LeggedRobotCfg):
 
 
 class x2CfgPPO(LeggedRobotCfgPPO):
-    # OnPolicyRunner  RNNOnPolicyRunner  GECOnPolicyRunner
-    runner_class_name = 'OnPolicyRunner'
+    # OnPolicyRunner  RNNOnPolicyRunner  RMAOnPolicyRunner
+    runner_class_name = 'RMAOnPolicyRunner'
 
     class policy:
         init_noise_std = 1.0

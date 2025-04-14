@@ -1,10 +1,10 @@
 import math
-
 import torch
 from torch import Tensor
 import numpy as np
 from isaacgym.torch_utils import quat_apply, normalize, get_euler_xyz
 from typing import Tuple
+
 
 # @ torch.jit.script
 def quat_apply_yaw(quat, vec):
@@ -32,7 +32,6 @@ def get_scale_shift(range):
     scale = 2. / (range[1] - range[0]) if range[1] != range[0] else 1.
     shift = (range[1] + range[0]) / 2.
     return scale, shift
-
 
 def get_euler_xyz_tensor(quat):
     r, p, w = get_euler_xyz(quat)
@@ -97,7 +96,6 @@ def euler_to_grav(euler):
     grav = np.dot(rot, np.array([0, 0, -1]))
     return grav
 
-
 # @ torch.jit.script
 def exp_avg_filter(x, avg, alpha):
     """
@@ -105,7 +103,6 @@ def exp_avg_filter(x, avg, alpha):
     """
     avg = alpha*x + (1-alpha)*avg
     return avg
-
 
 def apply_coupling(q, qd, q_des, qd_des, kp, kd, tau_ff):
     # Create a Jacobian matrix and move it to the same device as input tensors
@@ -149,19 +146,6 @@ def apply_coupling(q, qd, q_des, qd_des, kp, kd, tau_ff):
     return torques
 
 def kalman_filter(p, x, z):
-    """
-    一维卡尔曼滤波函数
-
-    参数:
-        q (float): 过程噪声协方差
-        r (float): 测量噪声协方差
-        x (float): 上一时刻的状态估计
-        p (float): 上一时刻的误差协方差
-        z (float): 当前的测量值
-
-    返回:
-        tuple: 更新后的状态估计值和误差协方差
-    """
     q = 1e-5
     r = 0.3
     x_pred = x
@@ -169,5 +153,4 @@ def kalman_filter(p, x, z):
     k = p_pred / (p_pred + r)
     x_new = x_pred + k * (z - x_pred)
     p_new = (1 - k) * p_pred
-
     return x_new, p_new

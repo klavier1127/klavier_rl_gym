@@ -5,7 +5,7 @@ from tqdm import tqdm
 from collections import deque
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs.x2.x2_config import x2Cfg
-from legged_gym.utils import quat_to_euler, quat_to_grav
+from legged_gym.utils import quat_to_grav
 import torch
 
 
@@ -34,6 +34,9 @@ def run_mujoco(policy, cfg):
     hist_obs = deque()
     for _ in range(cfg.env.frame_stack):
         hist_obs.append(np.zeros([1, cfg.env.num_single_obs], dtype=np.double))
+    obs_history = deque()
+    for _ in range(cfg.env.o_h_frame_stack):
+        obs_history.append(np.zeros([1, cfg.env.num_single_obs], dtype=np.double))
 
     phase = 0
     count_lowlevel = 0
@@ -66,11 +69,17 @@ def run_mujoco(policy, cfg):
             obs = np.clip(obs, -cfg.normalization.clip_observations, cfg.normalization.clip_observations)
             hist_obs.append(obs)
             hist_obs.popleft()
+            obs_history.append(obs)
+            obs_history.popleft()
 
             policy_input = np.zeros([1, cfg.env.num_observations], dtype=np.float32)
             for i in range(cfg.env.frame_stack):
                 policy_input[0, i * cfg.env.num_single_obs: (i + 1) * cfg.env.num_single_obs] = hist_obs[i][0, :]
-            action = policy(torch.tensor(policy_input)).detach().numpy()
+            policy_input_history = np.zeros([1, cfg.env.num_obs_history], dtype=np.float32)
+            for i in range(cfg.env.o_h_frame_stack):
+                policy_input_history[0, i * cfg.env.num_single_obs: (i + 1) * cfg.env.num_single_obs] = obs_history[i][0, :]
+            action = policy(torch.tensor(policy_input), torch.tensor(policy_input_history)).detach().numpy()
+
             action = np.clip(action, -cfg.normalization.clip_actions, cfg.normalization.clip_actions)
             target_q = action * cfg.control.action_scale
         target_dq = np.zeros((cfg.env.num_actions), dtype=np.double)
@@ -98,6 +107,6 @@ if __name__ == '__main__':
             kds = np.array([  4,   4,   4,   4,  4,       4,   4,   4,   4,  4], dtype=np.double)
             tau_limit = np.array([30, 45, 60, 60, 30,    30,  45,  60,  60,  30], dtype=np.double)
 
-    model_path = "../logs/x2/exported/policies/policy_mlp.pt"
+    model_path = "../logs/x2/exported/policies/policy_rma.pt"
     policy = torch.jit.load(model_path)
     run_mujoco(policy, Sim2simCfg())
