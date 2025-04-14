@@ -8,8 +8,8 @@ class go2Cfg(LeggedRobotCfg):
         o_h_frame_stack = 25
 
         num_single_obs = 47
-        num_single_critic_obs = 55# + 9
-        num_privileged_obs = 8
+        num_privileged_obs = 11
+        num_single_critic_obs = num_single_obs + num_privileged_obs
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)
@@ -31,13 +31,13 @@ class go2Cfg(LeggedRobotCfg):
         flip_visual_attachments = True          # Some .obj meshes must be flipped from y-up to z-up
 
     class terrain(LeggedRobotCfg.terrain):
-        # mesh_type = 'plane'
-        # curriculum = False
-        # measure_heights = False
+        mesh_type = 'plane'
+        curriculum = False
+        measure_heights = False
 
-        mesh_type = 'trimesh'
-        curriculum = True
-        measure_heights = True
+        # mesh_type = 'trimesh'
+        # curriculum = True
+        # measure_heights = True
 
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
         terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
@@ -139,6 +139,7 @@ class go2Cfg(LeggedRobotCfg):
         soft_dof_vel_limit = 0.9
         soft_torque_limit = 0.85
         # put some settings here for LLM parameter tuning
+        base_feet_height = 0.028
         target_feet_height = 0.06       # m
         cycle_time = 0.5               # sec
         target_air_time = 0.25
@@ -150,28 +151,29 @@ class go2Cfg(LeggedRobotCfg):
         max_contact_force = 100     # Forces above this value are penalized
 
         class scales:
-            hip_pos = 0.5
-            feet_contact = 0.25
-            feet_air_time = -2.
-            feet_height = -5.
+            hip_pos = -3.
+            feet_contact = 1.0
+            feet_air_time = 0.
+            feet_height = -10.
 
             # vel tracking
             tracking_lin_vel = 2.
             tracking_ang_vel = 1.
             ang_vel_xy = -0.1
-            lin_vel_z = -3.
+            lin_vel_z = -2.
             # base pos
-            orientation = -1.
-            base_height = -20.
+            default_dof_pos = -0.05
+            orientation = -0.   # -3.
+            base_height = -0.   # -3.
             # energy
-            action_rate = -0.01
-            torques = -1e-5
+            action_rate = -0.03
+            torques = -2e-4
             dof_vel = -1e-3
             dof_acc = -2.5e-7
             collision = -1.
             dof_pos_limits = -5.
             torque_limits = -1e-2
-            alive = 0.5
+            alive = 0.3
 
     class normalization:
         class obs_scales:
@@ -188,7 +190,7 @@ class go2Cfg(LeggedRobotCfg):
 class go2CfgPPO(LeggedRobotCfgPPO):
     # OnPolicyRunner  EstOnPolicyRunner  RNNOnPolicyRunner
     # DWLOnPolicyRunner PIAOnPolicyRunner SymOnPolicyRunner
-    runner_class_name = 'GECOnPolicyRunner'
+    runner_class_name = 'RNNOnPolicyRunner'
 
     class policy:
         # # only for 'OnPolicyRunner', 'OnPolicyRunner' and 'SymOnPolicyRunner':

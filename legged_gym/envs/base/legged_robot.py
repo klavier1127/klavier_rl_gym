@@ -534,7 +534,7 @@ class LeggedRobot(BaseTask):
         self.feet_contact_filt = torch.zeros(self.num_envs, self.feet_num, device=self.device, dtype=torch.bool)
         self.feet_air_time = torch.zeros(self.num_envs, self.feet_num, dtype=torch.float, device=self.device, requires_grad=False)
         self.phase = torch.zeros((self.num_envs, 1), dtype=torch.float, device=self.device, requires_grad=False)
-        self.feet_phase = torch.zeros((self.num_envs, 2), device=self.device)
+        self.feet_phase = torch.zeros((self.num_envs, self.feet_num), device=self.device)
         self.base_lin_vel = quat_rotate_inverse(self.base_quat, self.root_states[:, 7:10])
         self.base_ang_vel = quat_rotate_inverse(self.base_quat, self.root_states[:, 10:13])
         self.projected_gravity = quat_rotate_inverse(self.base_quat, self.gravity_vec)

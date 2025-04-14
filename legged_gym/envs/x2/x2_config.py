@@ -162,9 +162,9 @@ class x2Cfg(LeggedRobotCfg):
 
         class scales:
             # feet pos
-            hip_pos = 0.5
-            ankle_pos = -0.0
-            feet_contact = 0.5
+            hip_pos = -3.
+            ankle_pos = -1.0
+            feet_contact = 1.0
             feet_air_time = -0.0
             feet_height = -10.
             contact_no_vel = -0.3
@@ -177,12 +177,12 @@ class x2Cfg(LeggedRobotCfg):
             lin_vel_z = -2.0
 
             # base pos
-            default_dof_pos = -0.0
-            orientation = -1.
-            base_height = -1.
+            default_dof_pos = -0.05
+            orientation = -3.
+            base_height = -3.
 
             # energy
-            action_rate = -0.03
+            action_rate = -0.05
             torques = -1e-5
             dof_vel = -1e-3
             dof_acc = -2.5e-7

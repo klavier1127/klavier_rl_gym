@@ -93,16 +93,16 @@ class x2Env(LeggedRobot):
 
     # ================================================ Rewards ================================================== #
     #####################     foot-pos    #################################################################
-    def _reward_hip_pos(self):
-        error = 0.
-        error += self.sqrdexp(10. * (self.dof_pos[:, 0]))
-        error += self.sqrdexp(10. * (self.dof_pos[:, 1]))
-        error += self.sqrdexp(10. * (self.dof_pos[:, 5]))
-        error += self.sqrdexp(10. * (self.dof_pos[:, 6]))
-        return error / 4.
-
     # def _reward_hip_pos(self):
-    #     return torch.sum(torch.square(self.dof_pos[:, [0,1,5,6]] - self.default_dof_pos[:, [0,1,5,6]]), dim=1)
+    #     error = 0.
+    #     error += self.sqrdexp(10. * (self.dof_pos[:, 0]))
+    #     error += self.sqrdexp(10. * (self.dof_pos[:, 1]))
+    #     error += self.sqrdexp(10. * (self.dof_pos[:, 5]))
+    #     error += self.sqrdexp(10. * (self.dof_pos[:, 6]))
+    #     return error / 4.
+
+    def _reward_hip_pos(self):
+        return torch.sum(torch.square(self.dof_pos[:, [0,1,5,6]] - self.default_dof_pos[:, [0,1,5,6]]), dim=1)
 
     def _reward_ankle_pos(self):
         return torch.sum(torch.square(self.dof_pos[:, [4, 9]] - self.default_dof_pos[:, [4, 9]]), dim=1)
@@ -110,7 +110,7 @@ class x2Env(LeggedRobot):
     def _reward_feet_contact(self):
         walk_mask = self._get_walk_mask()
         reward = 1. * (self.contacts == walk_mask)
-        return torch.sum(reward, dim=1)
+        return torch.mean(reward, dim=1)
 
     # def _reward_feet_height(self):  # 稀疏奖励，仅在训练跑步步态时用
     #     swing_mask = 1 - (1. * self._get_walk_mask())

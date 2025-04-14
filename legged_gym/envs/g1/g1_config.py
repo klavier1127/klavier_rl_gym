@@ -3,13 +3,13 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 
 class g1Cfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
-        frame_stack = 1
-        c_frame_stack = 1
+        frame_stack = 15
+        c_frame_stack = 15
         o_h_frame_stack = 25
 
         num_single_obs = 47
-        num_single_critic_obs = 47 + 7# + 3
-        num_privileged_obs = 7# + 3
+        num_privileged_obs = 7  # + 3
+        num_single_critic_obs = num_single_obs + num_privileged_obs
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
         num_obs_history = int(o_h_frame_stack * num_single_obs)
@@ -36,7 +36,7 @@ class g1Cfg(LeggedRobotCfg):
 
         # mesh_type = 'trimesh'
         # curriculum = True
-        # measure_heights = True
+        # measure_heights = False
 
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
         terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
@@ -162,7 +162,7 @@ class g1Cfg(LeggedRobotCfg):
             # feet pos
             hip_pos = -2.0
             ankle_pos = -1.0
-            feet_contact = 0.5
+            feet_contact = 1.0
             feet_air_time = -0.0
             feet_height = -10.
             contact_no_vel = -0.3
@@ -203,20 +203,20 @@ class g1Cfg(LeggedRobotCfg):
 
 class g1CfgPPO(LeggedRobotCfgPPO):
     # OnPolicyRunner  RNNOnPolicyRunner  GECOnPolicyRunner
-    runner_class_name = 'RNNOnPolicyRunner'
+    runner_class_name = 'OnPolicyRunner'
 
     class policy:
         init_noise_std = 1.0
-        # # only for 'OnPolicyRunner'
-        # actor_hidden_dims = [512, 256, 128]
-        # critic_hidden_dims = [768, 256, 128]
+        # only for 'OnPolicyRunner'
+        actor_hidden_dims = [512, 256, 128]
+        critic_hidden_dims = [768, 256, 128]
 
-        # only for 'RNNOnPolicyRunner' and 'GECOnPolicyRunner':
-        actor_hidden_dims = [32]
-        critic_hidden_dims = [32]
-        rnn_type = 'lstm'
-        rnn_hidden_size = 64
-        rnn_num_layers = 1
+        # # only for 'RNNOnPolicyRunner' and 'GECOnPolicyRunner':
+        # actor_hidden_dims = [32]
+        # critic_hidden_dims = [32]
+        # rnn_type = 'lstm'
+        # rnn_hidden_size = 64
+        # rnn_num_layers = 1
 
     class algorithm(LeggedRobotCfgPPO.algorithm):
         schedule = 'adaptive'
