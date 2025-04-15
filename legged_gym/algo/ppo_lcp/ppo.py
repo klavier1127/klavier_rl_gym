@@ -94,71 +94,83 @@ class PPO:
         mean_value_loss = 0
         mean_surrogate_loss = 0
         mean_adaptation_module_loss = 0
+        mean_grad_penalty_loss = 0
 
         generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
         for (obs_batch, critic_obs_batch, privileged_obs_batch, obs_history_batch, actions_batch,
              target_values_batch, advantages_batch, returns_batch, old_actions_log_prob_batch,
                 old_mu_batch, old_sigma_batch, dones_batch) in generator:
+            obs_est_batch = obs_batch.clone()
+            obs_est_batch.requires_grad_()
 
-                self.actor_critic.act(obs_batch, privileged_obs_batch)
-                actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
-                value_batch = self.actor_critic.evaluate(critic_obs_batch)
-                mu_batch = self.actor_critic.action_mean
-                sigma_batch = self.actor_critic.action_std
-                entropy_batch = self.actor_critic.entropy
+            self.actor_critic.act(obs_est_batch, privileged_obs_batch)
+            actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
+            value_batch = self.actor_critic.evaluate(critic_obs_batch)
+            mu_batch = self.actor_critic.action_mean
+            sigma_batch = self.actor_critic.action_std
+            entropy_batch = self.actor_critic.entropy
 
-                # KL
-                if self.desired_kl != None and self.schedule == 'adaptive':
-                    with torch.inference_mode():
-                        kl = torch.sum(torch.log(sigma_batch / old_sigma_batch + 1.e-5) + (torch.square(old_sigma_batch) + torch.square(old_mu_batch - mu_batch)) / (2.0 * torch.square(sigma_batch)) - 0.5, axis=-1)
-                        kl_mean = torch.mean(kl)
-                        if kl_mean > self.desired_kl * 2.0:
-                            self.learning_rate = max(1e-5, self.learning_rate / 1.5)
-                        elif kl_mean < self.desired_kl / 2.0 and kl_mean > 0.0:
-                            self.learning_rate = min(1e-2, self.learning_rate * 1.5)
-                        for param_group in self.optimizer.param_groups:
-                            param_group['lr'] = self.learning_rate
+            # KL
+            if self.desired_kl != None and self.schedule == 'adaptive':
+                with torch.inference_mode():
+                    kl = torch.sum(
+                        torch.log(sigma_batch / old_sigma_batch + 1.e-5) + (torch.square(old_sigma_batch) + torch.square(old_mu_batch - mu_batch)) / (2.0 * torch.square(sigma_batch)) - 0.5, axis=-1)
+                    kl_mean = torch.mean(kl)
 
-                # Surrogate loss
-                ratio = torch.exp(actions_log_prob_batch - torch.squeeze(old_actions_log_prob_batch))
-                surrogate = -torch.squeeze(advantages_batch) * ratio
-                surrogate_clipped = -torch.squeeze(advantages_batch) * torch.clamp(ratio, 1.0 - self.clip_param, 1.0 + self.clip_param)
-                surrogate_loss = torch.max(surrogate, surrogate_clipped).mean()
+                    if kl_mean > self.desired_kl * 2.0:
+                        self.learning_rate = max(1e-5, self.learning_rate / 1.5)
+                    elif kl_mean < self.desired_kl / 2.0 and kl_mean > 0.0:
+                        self.learning_rate = min(1e-2, self.learning_rate * 1.5)
 
-                # Value function loss
-                if self.use_clipped_value_loss:
-                    value_clipped = target_values_batch + (value_batch - target_values_batch).clamp(-self.clip_param, self.clip_param)
-                    value_losses = (value_batch - returns_batch).pow(2)
-                    value_losses_clipped = (value_clipped - returns_batch).pow(2)
-                    value_loss = torch.max(value_losses, value_losses_clipped).mean()
-                else:
-                    value_loss = (returns_batch - value_batch).pow(2).mean()
+                    for param_group in self.optimizer.param_groups:
+                        param_group['lr'] = self.learning_rate
 
-                loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
+            # Calculate the gradient penalty loss
+            grad_log_prob = torch.autograd.grad(actions_log_prob_batch.sum(), obs_est_batch, create_graph=True)[0]
+            gradient_penalty_loss = torch.sum(torch.square(grad_log_prob), dim=-1).mean()
 
-                # Gradient step
-                self.optimizer.zero_grad()
-                loss.backward()
-                nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
-                self.optimizer.step()
+            # Surrogate loss
+            ratio = torch.exp(actions_log_prob_batch - torch.squeeze(old_actions_log_prob_batch))
+            surrogate = -torch.squeeze(advantages_batch) * ratio
+            surrogate_clipped = -torch.squeeze(advantages_batch) * torch.clamp(ratio, 1.0 - self.clip_param, 1.0 + self.clip_param)
+            surrogate_loss = torch.max(surrogate, surrogate_clipped).mean()
 
-                mean_value_loss += value_loss.item()
-                mean_surrogate_loss += surrogate_loss.item()
+            # Value function loss
+            if self.use_clipped_value_loss:
+                value_clipped = target_values_batch + (value_batch - target_values_batch).clamp(-self.clip_param, self.clip_param)
+                value_losses = (value_batch - returns_batch).pow(2)
+                value_losses_clipped = (value_clipped - returns_batch).pow(2)
+                value_loss = torch.max(value_losses, value_losses_clipped).mean()
+            else:
+                value_loss = (returns_batch - value_batch).pow(2).mean()
 
-                # Adaptation module gradient step
-                adaptation_pred = self.actor_critic.get_student_latent(obs_history_batch)
-                with torch.no_grad():
-                    adaptation_target = self.actor_critic.get_expert_latent(obs_batch, privileged_obs_batch)
-                adaptation_loss = nn.MSELoss()(adaptation_pred, adaptation_target)
-                self.adaptation_module_optimizer.zero_grad()
-                adaptation_loss.backward()
-                self.adaptation_module_optimizer.step()
-                mean_adaptation_module_loss += adaptation_loss.item()
+            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + 0.002 * gradient_penalty_loss
+
+            # Gradient step
+            self.optimizer.zero_grad()
+            loss.backward()
+            nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
+            self.optimizer.step()
+
+            mean_value_loss += value_loss.item()
+            mean_surrogate_loss += surrogate_loss.item()
+            mean_grad_penalty_loss += gradient_penalty_loss.item()
+
+            # Adaptation module gradient step
+            adaptation_pred = self.actor_critic.get_student_latent(obs_history_batch)
+            with torch.no_grad():
+                adaptation_target = self.actor_critic.get_expert_latent(obs_batch, privileged_obs_batch)
+            adaptation_loss = nn.MSELoss()(adaptation_pred, adaptation_target)
+            self.adaptation_module_optimizer.zero_grad()
+            adaptation_loss.backward()
+            self.adaptation_module_optimizer.step()
+            mean_adaptation_module_loss += adaptation_loss.item()
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
+        mean_grad_penalty_loss /= num_updates
         mean_adaptation_module_loss /= num_updates
-        self.storage.clear()
 
-        return mean_value_loss, mean_surrogate_loss, mean_adaptation_module_loss
+        self.storage.clear()
+        return mean_value_loss, mean_surrogate_loss, mean_adaptation_module_loss, mean_grad_penalty_loss

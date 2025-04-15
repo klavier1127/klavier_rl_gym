@@ -6,6 +6,7 @@ from legged_gym.algo import VecEnv
 from legged_gym.algo.ppo import OnPolicyRunner
 from legged_gym.algo.ppo_recurrent import RNNOnPolicyRunner
 from legged_gym.algo.ppo_rma import RMAOnPolicyRunner
+from legged_gym.algo.ppo_lcp import LCPOnPolicyRunner
 
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from .helpers import get_args, update_cfg_from_args, class_to_dict, get_load_path, set_seed, parse_sim_params

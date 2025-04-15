@@ -13,6 +13,7 @@ from deploy.base.DroidGrpcClient import DroidGrpcClient
 from deploy.utils.math_utils import euler_to_grav
 from deploy.utils.Gamepad_wired import GamepadState, GamepadHandler
 
+
 class Sim2Real(SimBase, DroidGrpcClient):
     def __init__(self, _cfg, _policy, _grpc_channel):
         SimBase.__init__(self, _cfg, _policy)
@@ -136,7 +137,7 @@ if __name__ == '__main__':
     handler = GamepadHandler()
     threading.Thread(target=handler.listen, args=(handle,), daemon=True).start()
     mode_path = f"{DEPLOY_ROOT_DIR}/logs/x2/exported/policies/policy_rma.pt"
-    channel = insecure_channel('192.168.55.10:50051')
+    channel = insecure_channel('192.168.55.12:50051')
     policy = torch.jit.load(mode_path)
     mybot = Sim2Real(deploy_config, policy, channel)
     mybot.init_robot()
