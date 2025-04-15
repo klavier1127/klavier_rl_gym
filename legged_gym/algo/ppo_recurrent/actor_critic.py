@@ -11,10 +11,10 @@ class ActorCritic(nn.Module):
                         num_privileged_obs,
                         num_obs_history,
                         num_actions,
-                        actor_hidden_dims=[256, 256, 256],
-                        critic_hidden_dims=[256, 256, 256],
+                        actor_hidden_dims=[64],
+                        critic_hidden_dims=[64],
                         rnn_type="lstm",
-                        rnn_hidden_size=64,
+                        rnn_hidden_size=128,
                         rnn_num_layers=1,
                         init_noise_std=1.0,
                         *args,
@@ -85,7 +85,7 @@ class ActorCritic(nn.Module):
 
 
 class Actor(nn.Module):
-    def __init__(self, num_actor_obs, num_actions, actor_hidden_dims = [512, 256, 128], activation = nn.ELU()):
+    def __init__(self, num_actor_obs, num_actions, actor_hidden_dims = [32], activation = nn.ELU()):
         super().__init__()
         mlp_input_dim_a = num_actor_obs
         actor_layers = []
@@ -105,7 +105,7 @@ class Actor(nn.Module):
 
 
 class Critic(nn.Module):
-    def __init__(self,num_critic_obs, critic_hidden_dims=[512, 256, 128], activation = nn.ELU()):
+    def __init__(self,num_critic_obs, critic_hidden_dims=[32], activation = nn.ELU()):
         super().__init__()
         mlp_input_dim_c = num_critic_obs
         critic_layers = []
@@ -125,7 +125,7 @@ class Critic(nn.Module):
 
 
 class Memory(torch.nn.Module):
-    def __init__(self, input_size, type="lstm", num_layers=1, hidden_size=256):
+    def __init__(self, input_size, type="lstm", num_layers=1, hidden_size=128):
         super().__init__()
         # RNN
         rnn_cls = nn.GRU if type.lower() == "gru" else nn.LSTM

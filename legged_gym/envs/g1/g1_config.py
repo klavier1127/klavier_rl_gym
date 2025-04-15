@@ -15,8 +15,6 @@ class g1Cfg(LeggedRobotCfg):
         num_obs_history = int(o_h_frame_stack * num_single_obs)
 
         num_actions = 12
-        num_envs = 4096
-        episode_length_s = 24  # episode length in seconds
 
     class asset(LeggedRobotCfg.asset):
         file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1/g1_12dof.urdf'
@@ -25,7 +23,6 @@ class g1Cfg(LeggedRobotCfg):
         knee_name = "knee"
         terminate_after_contacts_on = ['pelvis']
         penalize_contacts_on = ["knee", "hip"]
-        self_collisions = 0
         replace_cylinder_with_capsule = True
         flip_visual_attachments = False
 
@@ -93,8 +90,6 @@ class g1Cfg(LeggedRobotCfg):
 
     class sim(LeggedRobotCfg.sim):
         dt = 0.005  # 1000 Hz
-        substeps = 1  # 2
-        up_axis = 1  # 0 is y, 1 is z
 
     class domain_rand:
         push_robots = True
@@ -131,11 +126,6 @@ class g1Cfg(LeggedRobotCfg):
 
 
     class commands(LeggedRobotCfg.commands):
-        # Vers: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
-        num_commands = 4
-        resampling_time = 8.  # time before command are changed[s]
-        heading_command = True  # if true: compute ang vel command from heading error
-
         class ranges:
             lin_vel_x = [-1.0, 2.0]  # min max [m/s]
             lin_vel_y = [-1.0, 1.0]   # min max [m/s]
@@ -143,17 +133,14 @@ class g1Cfg(LeggedRobotCfg):
             heading = [-1.57, 1.57]
 
     class rewards:
-        soft_dof_pos_limit = 0.9
-        soft_dof_vel_limit = 0.9
-        soft_torque_limit = 0.8
+        # if true negative total rewards are clipped at zero (avoids early termination problems)
+        only_positive_rewards = False
+
         base_height_target = 0.78
         base_feet_height = 0.035
         target_feet_height = 0.08 # m
         cycle_time = 0.8 # sec
         target_air_time = 0.4 # sec
-
-        # if true negative total rewards are clipped at zero (avoids early termination problems)
-        only_positive_rewards = False
         # tracking reward = exp(error*sigma)
         tracking_sigma = 0.25
         max_contact_force = 500     # Forces above this value are penalized
@@ -189,54 +176,11 @@ class g1Cfg(LeggedRobotCfg):
             torque_limits = -1e-2
             alive = 0.3
 
-    class normalization:
-        class obs_scales:
-            lin_vel = 2.
-            ang_vel = 0.25
-            dof_pos = 1.
-            dof_vel = 0.05
-            quat = 1.
-            height_measurements = 5.0
-        clip_observations = 20.
-        clip_actions = 20.
-
-
 class g1CfgPPO(LeggedRobotCfgPPO):
     # OnPolicyRunner  RNNOnPolicyRunner  RMAOnPolicyRunner DWAQOnPolicyRunner
-    runner_class_name = 'DWAQOnPolicyRunner'
+    runner_class_name = 'OnPolicyRunner'
 
-    class policy:
-        init_noise_std = 1.0
-        # only for 'OnPolicyRunner'
-        actor_hidden_dims = [512, 256, 128]
-        critic_hidden_dims = [512, 256, 128]
-
-        # # only for 'RNNOnPolicyRunner' and 'GECOnPolicyRunner':
-        # actor_hidden_dims = [32]
-        # critic_hidden_dims = [32]
-        # rnn_type = 'lstm'
-        # rnn_hidden_size = 64
-        # rnn_num_layers = 1
-
-    class algorithm(LeggedRobotCfgPPO.algorithm):
-        schedule = 'adaptive'
-        entropy_coef = 0.01
-        gamma = 0.99
-        lam = 0.95
-        num_learning_epochs = 5
-        num_mini_batches = 4
-
-    class runner:
-        policy_class_name = 'ActorCritic'    # ActorCritic,  ActorCriticRecurrent,  ActorCriticPIA
-        algorithm_class_name = 'PPO'
+    class runner(LeggedRobotCfgPPO.runner):
         num_steps_per_env = 25  # per iteration
         max_iterations = 10000  # number of policy updates
-
-        # logging
-        save_interval = 100  # Please check for potential savings every `save_interval` iterations.
         experiment_name = 'g1'
-        # Load and resume
-        resume = False
-        load_run = -1  # -1 = last run
-        checkpoint = -1  # -1 = last saved model
-        resume_path = None  # updated from load_run and chkpt

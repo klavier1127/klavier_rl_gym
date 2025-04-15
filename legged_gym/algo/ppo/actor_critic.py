@@ -8,8 +8,8 @@ class ActorCritic(nn.Module):
                         num_privileged_obs,
                         num_obs_history,
                         num_actions,
-                        actor_hidden_dims=[256, 256, 256],
-                        critic_hidden_dims=[256, 256, 256],
+                        actor_hidden_dims=[512, 256, 128],
+                        critic_hidden_dims=[512, 256, 128],
                         init_noise_std=1.0,
                         activation = nn.ELU(),
                         **kwargs):

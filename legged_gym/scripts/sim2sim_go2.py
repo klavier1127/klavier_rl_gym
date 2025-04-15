@@ -5,7 +5,7 @@ from tqdm import tqdm
 from collections import deque
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs.go2.go2_config import go2Cfg
-from legged_gym.utils import quat_to_euler, quat_to_grav
+from legged_gym.utils import quat_to_grav
 import torch
 
 
@@ -48,7 +48,7 @@ def run_mujoco(policy, cfg):
     for _ in tqdm(range(int(cfg.sim_config.sim_duration / cfg.sim_config.dt)), desc="Simulating..."):
         # 1000hz -> 100hz
         force = [0, 0, 0]
-        vx, vy, dyaw = 0.0, 0.0, 0.0
+        vx, vy, dyaw = 0.5, 0.0, 0.0
         cmd = np.array([[vx, vy, dyaw]], dtype=np.float32)
         # Obtain an observation
         q, dq, omega, proj_grav = get_obs(data)

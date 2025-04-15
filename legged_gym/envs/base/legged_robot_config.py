@@ -2,13 +2,21 @@ from .base_config import BaseConfig
 
 class LeggedRobotCfg(BaseConfig):
     class env:
+        frame_stack = 15
+        c_frame_stack = 3
+        o_h_frame_stack = 25
+        num_single_obs = 47
+        num_privileged_obs = 7  # + 3
+        num_single_critic_obs = num_single_obs + num_privileged_obs
+        num_observations = int(frame_stack * num_single_obs)
+        num_critic_observations = int(c_frame_stack * num_single_critic_obs)
+        num_obs_history = int(o_h_frame_stack * num_single_obs)
+
         num_envs = 4096
-        num_observations = 235
-        num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
-        num_actions = 10
+        num_actions = 12
+        episode_length_s = 24 # episode length in seconds
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
-        episode_length_s = 20 # episode length in seconds
 
     class terrain:
         mesh_type = 'trimesh' # "heightfield" # none, plane, heightfield or trimesh
@@ -42,7 +50,7 @@ class LeggedRobotCfg(BaseConfig):
         resampling_time = 10. # time before command are changed[s]
         heading_command = True # if true: compute ang vel command from heading error
         class ranges:
-            lin_vel_x = [-1.0, 1.0] # min max [m/s]
+            lin_vel_x = [-1.0, 2.0] # min max [m/s]
             lin_vel_y = [-1.0, 1.0]   # min max [m/s]
             ang_vel_yaw = [-1, 1]    # min max [rad/s]
             heading = [-3.14, 3.14]
@@ -87,6 +95,10 @@ class LeggedRobotCfg(BaseConfig):
         armature = 0.
         thickness = 0.01
 
+    class safety:
+        soft_dof_pos_limit = 0.9
+        soft_dof_vel_limit = 0.9
+        soft_torque_limit = 0.8
 
     class domain_rand:
         randomize_friction = True
@@ -96,7 +108,6 @@ class LeggedRobotCfg(BaseConfig):
         push_robots = True
         push_interval_s = 15
         max_push_vel_xy = 1.
-
 
     class rewards:
         class scales:
@@ -126,6 +137,7 @@ class LeggedRobotCfg(BaseConfig):
             ang_vel = 0.25
             dof_pos = 1.0
             dof_vel = 0.05
+            quat = 1.
             height_measurements = 5.0
         clip_observations = 100.
         clip_actions = 100.
@@ -138,7 +150,7 @@ class LeggedRobotCfg(BaseConfig):
             dof_vel = 1.5
             lin_vel = 0.1
             ang_vel = 0.2
-            gravity = 0.05
+            quat = 0.05
             height_measurements = 0.1
 
     # viewer camera:
@@ -172,8 +184,8 @@ class LeggedRobotCfgPPO(BaseConfig):
     runner_class_name = 'OnPolicyRunner'
     class policy:
         init_noise_std = 1.0
-        actor_hidden_dims = [512, 256, 128]
-        critic_hidden_dims = [512, 256, 128]
+        # actor_hidden_dims = [512, 256, 128]
+        # critic_hidden_dims = [512, 256, 128]
 
     class algorithm:
         # training params
