@@ -29,7 +29,7 @@ class x2Cfg(LeggedRobotCfg):
         name = "x2"
         foot_name = "ankle_pitch"
         knee_name = "knee"
-        terminate_after_contacts_on = ['pelvis']
+        terminate_after_contacts_on = ["pelvis", "hip", "knee"]
         penalize_contacts_on = ["knee", "hip"]
         self_collisions = 0
         replace_cylinder_with_capsule = True
@@ -52,9 +52,9 @@ class x2Cfg(LeggedRobotCfg):
         noise_level = 1.0    # scales other values
 
         class noise_scales:
-            dof_pos = 0.03
+            dof_pos = 0.01
             dof_vel = 1.5
-            ang_vel = 0.3
+            ang_vel = 0.2
             lin_vel = 0.1
             quat = 0.05
             height_measurements = 0.1
@@ -100,8 +100,8 @@ class x2Cfg(LeggedRobotCfg):
 
     class domain_rand:
         push_robots = True
-        push_interval_s = 8
-        max_push_vel_xy = 0.8
+        push_interval_s = 9
+        max_push_vel_xy = 1.0
         max_push_ang_vel = 0.5
         dynamic_randomization = 0.02
 
@@ -125,9 +125,9 @@ class x2Cfg(LeggedRobotCfg):
         randomize_motor_offset = True
         motor_offset_range = [-0.035, 0.035]
         randomize_joint_friction = True
-        joint_friction_range = [0.01, 1.15]
+        joint_friction_range = [0.01, 0.1]
         randomize_joint_damping = True
-        joint_damping_range = [0.3, 1.5]
+        joint_damping_range = [0.1, 0.3]
         randomize_joint_armature = True
         joint_armature_range = [0.01, 0.03]
 
@@ -157,32 +157,32 @@ class x2Cfg(LeggedRobotCfg):
         # if true negative total rewards are clipped at zero (avoids early termination problems)
         only_positive_rewards = False
         # tracking reward = exp(error*sigma)
-        tracking_sigma = 0.5
+        tracking_sigma = 0.25
         max_contact_force = 400     # Forces above this value are penalized
 
         class scales:
             # feet pos
-            hip_pos = -3.
+            hip_pos = -2.0
             ankle_pos = -1.0
-            feet_contact = 1.0
+            feet_contact = 0.5
             feet_air_time = -0.0
             feet_height = -10.
-            contact_no_vel = -0.3
-            contact_forces = -0.01
+            contact_no_vel = -0.2
+            contact_forces = -0.005
 
             # vel tracking
-            tracking_lin_vel = 2.0
-            tracking_ang_vel = 1.0
-            ang_vel_xy = -0.1
-            lin_vel_z = -2.0
+            tracking_lin_vel = 1.0
+            tracking_ang_vel = 0.5
+            ang_vel_xy = -0.05
+            lin_vel_z = -1.0
 
             # base pos
-            default_dof_pos = -0.05
-            orientation = -3.
-            base_height = -3.
+            default_dof_pos = -0.03
+            orientation = -1.
+            base_height = -1.
 
             # energy
-            action_rate = -0.05
+            action_rate = -0.03
             torques = -1e-5
             dof_vel = -1e-3
             dof_acc = -2.5e-7
@@ -211,7 +211,7 @@ class x2CfgPPO(LeggedRobotCfgPPO):
         init_noise_std = 1.0
         # only for 'OnPolicyRunner'
         actor_hidden_dims = [512, 256, 128]
-        critic_hidden_dims = [768, 256, 128]
+        critic_hidden_dims = [512, 256, 128]
 
         # # only for 'RNNOnPolicyRunner' and 'GECOnPolicyRunner':
         # actor_hidden_dims = [32]

@@ -4,7 +4,7 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 class g1Cfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
         frame_stack = 15
-        c_frame_stack = 15
+        c_frame_stack = 3
         o_h_frame_stack = 25
 
         num_single_obs = 47
@@ -98,9 +98,9 @@ class g1Cfg(LeggedRobotCfg):
 
     class domain_rand:
         push_robots = True
-        push_interval_s = 5
-        max_push_vel_xy = 1.5
-        max_push_ang_vel = 1.0
+        push_interval_s = 9
+        max_push_vel_xy = 1.0
+        max_push_ang_vel = 0.5
         dynamic_randomization = 0.02
 
         randomize_commands = True
@@ -113,7 +113,7 @@ class g1Cfg(LeggedRobotCfg):
         randomize_all_com = False
         rd_com_range = [-0.03, 0.03]
         randomize_base_com = False
-        added_com_range = [-0.10, 0.10]
+        added_com_range = [-0.06, 0.06]
         randomize_Kp_factor = False
         Kp_factor_range = [0.8, 1.2]
         randomize_Kd_factor = False
@@ -123,9 +123,9 @@ class g1Cfg(LeggedRobotCfg):
         randomize_motor_offset = False
         motor_offset_range = [-0.035, 0.035]
         randomize_joint_friction = False
-        joint_friction_range = [0.01, 1.15]
+        joint_friction_range = [0.01, 0.03]
         randomize_joint_damping = False
-        joint_damping_range = [0.3, 1.5]
+        joint_damping_range = [0.1, 0.3]
         randomize_joint_armature = True
         joint_armature_range = [0.01, 0.03]
 
@@ -155,32 +155,32 @@ class g1Cfg(LeggedRobotCfg):
         # if true negative total rewards are clipped at zero (avoids early termination problems)
         only_positive_rewards = False
         # tracking reward = exp(error*sigma)
-        tracking_sigma = 0.5
+        tracking_sigma = 0.25
         max_contact_force = 500     # Forces above this value are penalized
 
         class scales:
             # feet pos
             hip_pos = -2.0
             ankle_pos = -1.0
-            feet_contact = 1.0
+            feet_contact = 0.5
             feet_air_time = -0.0
             feet_height = -10.
-            contact_no_vel = -0.3
+            contact_no_vel = -0.2
             contact_forces = -0.0
 
             # vel tracking
-            tracking_lin_vel = 2.0
-            tracking_ang_vel = 1.0
-            ang_vel_xy = -0.1
-            lin_vel_z = -2.0
+            tracking_lin_vel = 1.0
+            tracking_ang_vel = 0.5
+            ang_vel_xy = -0.05
+            lin_vel_z = -1.0
 
             # base pos
-            default_dof_pos = -0.05
-            orientation = -3.
-            base_height = -3.
+            default_dof_pos = -0.03
+            orientation = -1.
+            base_height = -1.
 
             # energy
-            action_rate = -0.03
+            action_rate = -0.01
             torques = -1e-5
             dof_vel = -1e-3
             dof_acc = -2.5e-7
@@ -202,14 +202,14 @@ class g1Cfg(LeggedRobotCfg):
 
 
 class g1CfgPPO(LeggedRobotCfgPPO):
-    # OnPolicyRunner  RNNOnPolicyRunner  GECOnPolicyRunner
+    # OnPolicyRunner  RNNOnPolicyRunner  RMAOnPolicyRunner
     runner_class_name = 'OnPolicyRunner'
 
     class policy:
         init_noise_std = 1.0
         # only for 'OnPolicyRunner'
         actor_hidden_dims = [512, 256, 128]
-        critic_hidden_dims = [768, 256, 128]
+        critic_hidden_dims = [512, 256, 128]
 
         # # only for 'RNNOnPolicyRunner' and 'GECOnPolicyRunner':
         # actor_hidden_dims = [32]
