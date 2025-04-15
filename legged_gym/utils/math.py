@@ -32,8 +32,8 @@ def get_scale_shift(range):
     shift = (range[1] + range[0]) / 2.
     return scale, shift
 
-def min_max_normalize(value, min_val, max_val):
-    return (value - min_val) / (max_val - min_val)
+def min_max_normalize(value, range):
+    return (value - range[0]) / (range[1] - range[0])
 
 def get_euler_xyz_tensor(quat):
     r, p, w = get_euler_xyz(quat)

@@ -51,14 +51,9 @@ def run_mujoco(policy, cfg):
         phase = phase + dt_phase
 
         if count_lowlevel % cfg.sim_config.decimation == 0:
-            phase_sin = np.sin(2 * math.pi * phase)
-            phase_cos = np.cos(2 * math.pi * phase)
-            # phase_sin = np.where(stand_mask, 0, phase_sin)
-            # phase_cos = np.where(stand_mask, 0, phase_cos)
-
             obs = np.zeros([1, cfg.env.num_single_obs], dtype=np.float32)
-            obs[0, 0] = phase_sin
-            obs[0, 1] = phase_cos
+            obs[0, 0] = np.sin(2 * math.pi * phase)
+            obs[0, 1] = np.cos(2 * math.pi * phase)
             obs[0, 2:5] = cmd[0] * 2
             obs[0, 5:15] = (q - default_pos)
             obs[0, 15:25] = dq * 0.05 # dq * 0.05
