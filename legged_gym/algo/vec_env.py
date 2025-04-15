@@ -9,6 +9,7 @@ class VecEnv(ABC):
     num_critic_obs: int
     num_privileged_obs: int
     num_obs_history: int
+    num_single_obs: int
     num_actions: int
     max_episode_length: int
 

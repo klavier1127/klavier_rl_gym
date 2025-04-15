@@ -33,6 +33,7 @@ class BaseTask():
         self.num_critic_obs = cfg.env.num_critic_observations
         self.num_privileged_obs = cfg.env.num_privileged_obs
         self.num_obs_history = cfg.env.num_obs_history
+        self.num_single_obs = cfg.env.num_single_obs
         self.num_actions = cfg.env.num_actions
 
         # optimization flags for pytorch JIT

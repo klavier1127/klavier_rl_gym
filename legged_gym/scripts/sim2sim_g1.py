@@ -6,7 +6,7 @@ from collections import deque
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from legged_gym.envs import g1Cfg
 import torch
-from legged_gym.utils import quat_to_euler, quat_to_grav
+from legged_gym.utils import quat_to_grav
 
 
 def get_obs(data):
@@ -109,6 +109,6 @@ if __name__ == '__main__':
             kps = np.array([100, 100, 100, 150, 40, 40, 100, 100, 100, 150, 40, 40], dtype=np.double)
             kds = np.array([2, 2, 2, 4, 2, 2, 2, 2, 2, 4, 2, 2], dtype=np.double)
             tau_limit = 100. * np.ones(12, dtype=np.double)
-    model_path = ("../logs/g1/exported/policies/policy_mlp.pt")
+    model_path = ("../logs/g1/exported/policies/policy_dwaq.pt")
     policy = torch.jit.load(model_path)
     run_mujoco(policy, Sim2simCfg())

@@ -219,6 +219,9 @@ def export_policy_as_jit(actor_critic, path):
     elif hasattr(actor_critic, 'adaptation_module'):
         exporter = PolicyExporterRMA(actor_critic)
         exporter.export(path)
+    elif hasattr(actor_critic, 'vae'):
+        exporter = PolicyExporterDWAQ(actor_critic)
+        exporter.export(path)
     else:
         exporter = PolicyExporterMLP(actor_critic)
         exporter.export(path)
@@ -311,4 +314,20 @@ class PolicyExporterRMA(torch.nn.Module):
         traced_script_module = torch.jit.script(self)
         traced_script_module.save(path)
 
+class PolicyExporterDWAQ(torch.nn.Module):
+    def __init__(self, actor_critic):
+        super().__init__()
+        self.actor = copy.deepcopy(actor_critic.actor)
+        self.vae = copy.deepcopy(actor_critic.vae)
 
+    def forward(self, obs, obs_history):
+        latent, vel = self.vae.inference(obs_history)
+        input = torch.cat((obs, latent, vel), dim=-1)
+        return self.actor(input)
+
+    def export(self, path):
+        os.makedirs(path, exist_ok=True)
+        path = os.path.join(path, 'policy_dwaq.pt')
+        self.to('cpu')
+        traced_script_module = torch.jit.script(self)
+        traced_script_module.save(path)
