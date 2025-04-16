@@ -90,7 +90,15 @@ class go2Env(LeggedRobot):
 
     #####################     foot-pos    #################################################################
     def _reward_hip_pos(self):
-        return torch.sum(torch.square(self.dof_pos[:, [0, 3, 6, 9]] - self.default_dof_pos[:, [0, 3, 6, 9]]), dim=1)
+        error = 0.
+        error += self.sqrdexp(10. * (self.dof_pos[:, 0]))
+        error += self.sqrdexp(10. * (self.dof_pos[:, 3]))
+        error += self.sqrdexp(10. * (self.dof_pos[:, 6]))
+        error += self.sqrdexp(10. * (self.dof_pos[:, 9]))
+        return error / 4.
+
+    # def _reward_hip_pos(self):
+    #     return torch.sum(torch.square(self.dof_pos[:, [0, 3, 6, 9]] - self.default_dof_pos[:, [0, 3, 6, 9]]), dim=1)
 
     def _reward_feet_height(self):
         contact_foot_f = torch.min(self.feet_pos[:, 0, 2], self.feet_pos[:, 1, 2])

@@ -134,7 +134,7 @@ class go2Cfg(LeggedRobotCfg):
         max_contact_force = 100     # Forces above this value are penalized
 
         class scales:
-            hip_pos = -2.
+            hip_pos = 0.3
             feet_contact = 0.5
             feet_air_time = 0.
             feet_height = -10.

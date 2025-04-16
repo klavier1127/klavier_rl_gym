@@ -29,7 +29,6 @@ def run_mujoco(policy, cfg):
     data.qpos[7:] = default_pos
     mujoco.mj_step(model, data)
     viewer = mujoco_viewer.MujocoViewer(model, data)
-
     target_q = np.zeros((cfg.env.num_actions), dtype=np.double)
     action = np.zeros((cfg.env.num_actions), dtype=np.double)
 
@@ -44,7 +43,6 @@ def run_mujoco(policy, cfg):
     count_lowlevel = 0
 
     for _ in tqdm(range(int(cfg.sim_config.sim_duration / cfg.sim_config.dt)), desc="Simulating..."):
-        # 1000hz -> 100hz
         force = [0, 0, 0]
         vx, vy, dyaw = 0.5, 0.0, 0.0
         cmd = np.array([[vx, vy, dyaw]], dtype=np.float32)
@@ -53,16 +51,10 @@ def run_mujoco(policy, cfg):
         cycle_time = 0.8
         dt_phase = cfg.sim_config.dt / cycle_time
         phase = phase + dt_phase
-
         if count_lowlevel % cfg.sim_config.decimation == 0:
-            phase_sin = np.sin(2 * math.pi * phase)
-            phase_cos = np.cos(2 * math.pi * phase)
-            # phase_sin = np.where(stand_mask, 0, phase_sin)
-            # phase_cos = np.where(stand_mask, 0, phase_cos)
-
             obs = np.zeros([1, cfg.env.num_single_obs], dtype=np.float32)
-            obs[0, 0] = phase_sin
-            obs[0, 1] = phase_cos
+            obs[0, 0] = np.sin(2 * math.pi * phase)
+            obs[0, 1] = np.cos(2 * math.pi * phase)
             obs[0, 2:5] = cmd[0] * 2
             obs[0, 5:17] = (q - default_pos)
             obs[0, 17:29] = dq * 0.05 # dq * 0.05

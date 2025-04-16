@@ -147,7 +147,7 @@ class g1Cfg(LeggedRobotCfg):
 
         class scales:
             # feet pos
-            hip_pos = -2.0
+            hip_pos = 0.3
             ankle_pos = -1.0
             feet_contact = 0.5
             feet_air_time = -0.0
