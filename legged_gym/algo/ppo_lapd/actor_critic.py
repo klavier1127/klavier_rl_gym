@@ -13,10 +13,10 @@ class ActorCritic(nn.Module):
                         num_privileged_obs,
                         num_obs_history,
                         num_actions,
-                        actor_hidden_dims=[256, 256, 256],
-                        critic_hidden_dims=[256, 256, 256],
+                        actor_hidden_dims=[64],
+                        critic_hidden_dims=[64],
                         rnn_type="lstm",
-                        rnn_hidden_size=64,
+                        rnn_hidden_size=128,
                         rnn_num_layers=1,
                         init_noise_std=1.0,
                         *args,
@@ -27,9 +27,9 @@ class ActorCritic(nn.Module):
             print(
                 "ActorCriticRecurrent.__init__ got unexpected arguments, which will be ignored: " + str(kwargs.keys()),
             )
-        self.ae = AE(num_privileged_obs, 6)
-        self.estimator = Estimator(num_obs_history, 6)
-        self.memory_a = Memory(num_actor_obs+6, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
+        self.ae = AE(num_privileged_obs, 3)
+        self.estimator = Estimator(num_obs_history, 3)
+        self.memory_a = Memory(num_actor_obs+3, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.memory_c = Memory(num_critic_obs, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.actor = Actor(rnn_hidden_size, num_actions, actor_hidden_dims)
         self.critic = Critic(rnn_hidden_size, critic_hidden_dims)
@@ -67,7 +67,7 @@ class ActorCritic(nn.Module):
         mean = self.actor(observations)
         self.distribution = Normal(mean, mean * 0. + self.std)
 
-    def act(self, observations, obs_history, privileged_obs, masks=None, hidden_states=None):
+    def act(self, observations, privileged_obs, masks=None, hidden_states=None):
         latent, _ = self.ae(privileged_obs)
         input_memory = torch.cat((observations, latent), dim=-1)
         input_a = self.memory_a(input_memory, masks, hidden_states)
@@ -89,7 +89,7 @@ class ActorCritic(nn.Module):
         input_a = self.memory_a(input_memory)
         return self.actor(input_a.squeeze(0))
 
-    def evaluate(self, critic_observations, obs_history, privileged_obs, masks=None, hidden_states=None):
+    def evaluate(self, critic_observations, masks=None, hidden_states=None):
         input_c = self.memory_c(critic_observations, masks, hidden_states)
         return self.critic(input_c.squeeze(0))
 

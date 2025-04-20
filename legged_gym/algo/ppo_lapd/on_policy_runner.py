@@ -4,8 +4,6 @@ from collections import deque
 import statistics
 from torch.utils.tensorboard import SummaryWriter
 import torch
-import wandb
-from datetime import datetime
 from .ppo import PPO
 from .actor_critic import ActorCritic
 from legged_gym.algo.vec_env import VecEnv
@@ -22,14 +20,9 @@ class LAPDOnPolicyRunner:
         self.cfg = train_cfg["runner"]
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
-        self.all_cfg = train_cfg
-        self.wandb_run_name = (
-                datetime.now().strftime("%b%d_%H-%M-%S")
-                + "_"
-                + train_cfg["runner"]["experiment_name"]
-        )
         self.device = device
         self.env = env
+
         actor_critic_class = eval(self.cfg["policy_class_name"])  # ActorCritic
         actor_critic: ActorCritic = actor_critic_class(self.env.num_obs,
                                                        self.env.num_critic_obs,
@@ -59,12 +52,6 @@ class LAPDOnPolicyRunner:
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
         # initialize writer
         if self.log_dir is not None and self.writer is None:
-            # wandb.init(
-            #     project="g1",
-            #     sync_tensorboard=True,
-            #     name=self.wandb_run_name,
-            #     config=self.all_cfg,
-            # )
             self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
         if init_at_random_ep_len:
             self.env.episode_length_buf = torch.randint_like(self.env.episode_length_buf,
@@ -92,7 +79,7 @@ class LAPDOnPolicyRunner:
                     obs, critic_obs, rewards, dones, infos = self.env.step(actions)
                     obs, critic_obs, rewards, dones = obs.to(self.device), critic_obs.to(self.device), rewards.to(self.device), dones.to(self.device)
                     privileged_obs, obs_history = infos['privileged_obs'], infos['obs_history']
-                    self.alg.process_env_step(rewards, dones, obs, infos)
+                    self.alg.process_env_step(rewards, dones, infos)
 
                     if self.log_dir is not None:
                         # Book keeping
@@ -110,7 +97,7 @@ class LAPDOnPolicyRunner:
                 collection_time = stop - start
                 # Learning step
                 start = stop
-                self.alg.compute_returns(critic_obs, obs_history, privileged_obs)
+                self.alg.compute_returns(critic_obs)
 
             mean_value_loss, mean_surrogate_loss, mean_ae_loss, mean_estimator_loss, mean_consistent_loss = self.alg.update()
 

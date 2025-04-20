@@ -15,7 +15,7 @@ class PPO:
         num_learning_epochs=1,
         num_mini_batches=1,
         clip_param=0.2,
-        gamma=0.998,
+        gamma=0.99,
         lam=0.95,
         value_loss_coef=1.0,
         entropy_coef=0.0,
@@ -67,8 +67,8 @@ class PPO:
         if self.actor_critic.is_recurrent:
             self.transition.hidden_states = self.actor_critic.get_hidden_states()
         # Compute the actions and values
-        self.transition.actions = self.actor_critic.act(obs, obs_history, privileged_obs).detach()
-        self.transition.values = self.actor_critic.evaluate(critic_obs, obs_history, privileged_obs).detach()
+        self.transition.actions = self.actor_critic.act(obs, privileged_obs).detach()
+        self.transition.values = self.actor_critic.evaluate(critic_obs).detach()
         self.transition.actions_log_prob = self.actor_critic.get_actions_log_prob(self.transition.actions).detach()
         self.transition.action_mean = self.actor_critic.action_mean.detach()
         self.transition.action_sigma = self.actor_critic.action_std.detach()
@@ -79,10 +79,9 @@ class PPO:
         self.transition.obs_history = obs_history
         return self.transition.actions
 
-    def process_env_step(self, rewards, dones, next_obs, infos):
+    def process_env_step(self, rewards, dones, infos):
         self.transition.rewards = rewards.clone()
         self.transition.dones = dones
-        self.transition.next_observations = next_obs
         # Bootstrapping on time outs
         if "time_outs" in infos:
             self.transition.rewards += self.gamma * torch.squeeze(
@@ -94,8 +93,8 @@ class PPO:
         self.transition.clear()
         self.actor_critic.reset(dones)
 
-    def compute_returns(self, last_critic_obs, obs_history, privileged_obs):
-        last_values = self.actor_critic.evaluate(last_critic_obs, obs_history, privileged_obs).detach()
+    def compute_returns(self, last_critic_obs):
+        last_values = self.actor_critic.evaluate(last_critic_obs).detach()
         self.storage.compute_returns(last_values, self.gamma, self.lam)
 
     def update(self):
@@ -126,9 +125,9 @@ class PPO:
             dones_batch,
         ) in generator:
 
-            self.actor_critic.act(obs_batch, obs_history_batch, privileged_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
+            self.actor_critic.act(obs_batch, privileged_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
             actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
-            value_batch = self.actor_critic.evaluate(critic_obs_batch, obs_history_batch, privileged_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1])
+            value_batch = self.actor_critic.evaluate(critic_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1])
 
             mu_batch = self.actor_critic.action_mean
             sigma_batch = self.actor_critic.action_std
