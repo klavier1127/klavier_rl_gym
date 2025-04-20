@@ -3,8 +3,8 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 
 class g1Cfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
-        frame_stack = 15
-        c_frame_stack = 3
+        frame_stack = 1
+        c_frame_stack = 1
         o_h_frame_stack = 25
 
         num_single_obs = 47
@@ -177,8 +177,8 @@ class g1Cfg(LeggedRobotCfg):
             alive = 0.3
 
 class g1CfgPPO(LeggedRobotCfgPPO):
-    # OnPolicyRunner  RNNOnPolicyRunner  RMAOnPolicyRunner DWAQOnPolicyRunner
-    runner_class_name = 'OnPolicyRunner'
+    # OnPolicyRunner  RNNOnPolicyRunner  RMAOnPolicyRunner DWAQOnPolicyRunner LAPDOnPolicyRunner
+    runner_class_name = 'LAPDOnPolicyRunner'
 
     class runner(LeggedRobotCfgPPO.runner):
         num_steps_per_env = 25  # per iteration

@@ -44,7 +44,7 @@ def run_mujoco(policy, cfg):
 
     for _ in tqdm(range(int(cfg.sim_config.sim_duration / cfg.sim_config.dt)), desc="Simulating..."):
         force = [0, 0, 0]
-        vx, vy, dyaw = 0.5, 0.0, 0.0
+        vx, vy, dyaw = 0.0, 0.0, 0.0
         cmd = np.array([[vx, vy, dyaw]], dtype=np.float32)
         # Obtain an observation
         q, dq, omega, proj_grav = get_obs(data)
@@ -101,6 +101,6 @@ if __name__ == '__main__':
             kps = np.array([100, 100, 100, 150, 40, 40, 100, 100, 100, 150, 40, 40], dtype=np.double)
             kds = np.array([2, 2, 2, 4, 2, 2, 2, 2, 2, 4, 2, 2], dtype=np.double)
             tau_limit = 100. * np.ones(12, dtype=np.double)
-    model_path = ("../logs/g1/exported/policies/policy_mlp.pt")
+    model_path = "../logs/g1/exported/policies/policy_lapd.pt"
     policy = torch.jit.load(model_path)
     run_mujoco(policy, Sim2simCfg())
