@@ -4,6 +4,8 @@ from collections import deque
 import statistics
 from torch.utils.tensorboard import SummaryWriter
 import torch
+import wandb
+from datetime import datetime
 from .ppo import PPO
 from .actor_critic import ActorCritic
 from legged_gym.algo.vec_env import VecEnv
@@ -20,9 +22,14 @@ class LAPDOnPolicyRunner:
         self.cfg = train_cfg["runner"]
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
+        self.all_cfg = train_cfg
         self.device = device
         self.env = env
-
+        self.wandb_run_name = (
+                datetime.now().strftime("%b%d_%H-%M-%S")
+                + "_"
+                + train_cfg["runner"]["experiment_name"]
+        )
         actor_critic_class = eval(self.cfg["policy_class_name"])  # ActorCritic
         actor_critic: ActorCritic = actor_critic_class(self.env.num_obs,
                                                        self.env.num_critic_obs,
@@ -52,6 +59,12 @@ class LAPDOnPolicyRunner:
     def learn(self, num_learning_iterations, init_at_random_ep_len=False):
         # initialize writer
         if self.log_dir is not None and self.writer is None:
+            wandb.init(
+                project="g1",
+                sync_tensorboard=True,
+                name=self.wandb_run_name,
+                config=self.all_cfg,
+            )
             self.writer = SummaryWriter(log_dir=self.log_dir, flush_secs=10)
         if init_at_random_ep_len:
             self.env.episode_length_buf = torch.randint_like(self.env.episode_length_buf,

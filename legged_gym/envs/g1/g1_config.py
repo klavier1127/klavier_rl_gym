@@ -127,8 +127,8 @@ class g1Cfg(LeggedRobotCfg):
 
     class commands(LeggedRobotCfg.commands):
         class ranges:
-            lin_vel_x = [-1.0, 2.0]  # min max [m/s]
-            lin_vel_y = [-1.0, 1.0]   # min max [m/s]
+            lin_vel_x = [-1.0, 1.0]  # min max [m/s]
+            lin_vel_y = [-0.5, 0.5]   # min max [m/s]
             ang_vel_yaw = [-1, 1]    # min max [rad/s]
             heading = [-1.57, 1.57]
 
