@@ -47,3 +47,7 @@ class VecEnv(ABC):
     @abstractmethod
     def get_observations_history(self) -> torch.Tensor:
         pass
+
+    @abstractmethod
+    def get_amp_observations(self) -> torch.Tensor:
+        pass

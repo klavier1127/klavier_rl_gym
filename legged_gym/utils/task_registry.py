@@ -9,6 +9,7 @@ from legged_gym.algo.ppo_rma import RMAOnPolicyRunner
 from legged_gym.algo.ppo_lcp import LCPOnPolicyRunner
 from legged_gym.algo.ppo_dwaq import DWAQOnPolicyRunner
 from legged_gym.algo.ppo_lapd import LAPDOnPolicyRunner
+from legged_gym.algo.ppo_amp import AMPOnPolicyRunner
 
 from legged_gym import LEGGED_GYM_ROOT_DIR
 from .helpers import get_args, update_cfg_from_args, class_to_dict, get_load_path, set_seed, parse_sim_params
