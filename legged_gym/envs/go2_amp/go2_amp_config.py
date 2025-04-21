@@ -142,12 +142,12 @@ class go2AMPCfg(LeggedRobotCfg):
 
         class scales:
             # vel tracking
-            tracking_lin_vel = 1.    # 1.
-            tracking_ang_vel = 0.05   # 0.5
-            ang_vel_xy = -0.05    # -0.05
-            lin_vel_z = -1.      # -2.
+            tracking_lin_vel = 1.0
+            tracking_ang_vel = 0.5
+            ang_vel_xy = -0.05
+            lin_vel_z = -1.
             # energy
-            action_rate = -0.01      # -0.5
+            action_rate = -0.01
             torques = -1e-4
             dof_vel = -1e-3
             dof_acc = -2.5e-7

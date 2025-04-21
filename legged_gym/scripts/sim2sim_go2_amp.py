@@ -47,7 +47,7 @@ def run_mujoco(policy, cfg):
 
     for _ in tqdm(range(int(cfg.sim_config.sim_duration / cfg.sim_config.dt)), desc="Simulating..."):
         force = [0, 0, 0]
-        vx, vy, dyaw = 1.0, 0.0, 0.0
+        vx, vy, dyaw = 2.0, 0.0, 0.0
         cmd = np.array([[vx, vy, dyaw]], dtype=np.float32)
         # Obtain an observation
         q, dq, omega, proj_grav = get_obs(data)
