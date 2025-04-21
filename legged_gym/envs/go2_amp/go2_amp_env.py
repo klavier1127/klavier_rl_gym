@@ -127,25 +127,3 @@ class go2AMPEnv(LeggedRobot):
         dim=-1)
         return self.amp_obs_buf
 
-    def _reset_dofs_amp(self, env_ids, frames):
-        self.dof_pos[env_ids] = AMPLoader.get_joint_pose_batch(frames).to(torch.float32)
-        self.dof_vel[env_ids] = AMPLoader.get_joint_vel_batch(frames).to(torch.float32)
-        env_ids_int32 = env_ids.to(dtype=torch.int32)
-        self.gym.set_dof_state_tensor_indexed(self.sim,
-                                              gymtorch.unwrap_tensor(self.dof_state),
-                                              gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
-
-    def _reset_root_states_amp(self, env_ids, frames):
-        # base position
-        root_pos = AMPLoader.get_root_pos_batch(frames)
-        root_pos[:, :2] = root_pos[:, :2] + self.env_origins[env_ids, :2]
-        self.root_states[env_ids, :3] = root_pos
-        root_orn = AMPLoader.get_root_rot_batch(frames)
-        self.root_states[env_ids, 3:7] = root_orn
-        self.root_states[env_ids, 7:10] = quat_rotate(root_orn, AMPLoader.get_linear_vel_batch(frames))
-        self.root_states[env_ids, 10:13] = quat_rotate(root_orn, AMPLoader.get_angular_vel_batch(frames))
-
-        env_ids_int32 = env_ids.to(dtype=torch.int32)
-        self.gym.set_actor_root_state_tensor_indexed(self.sim,
-                                                     gymtorch.unwrap_tensor(self.root_states),
-                                                     gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
