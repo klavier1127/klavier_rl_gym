@@ -1,14 +1,13 @@
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
 from legged_gym.envs import LeggedRobot
 import torch
-from legged_gym.algo.ppo_amp.datasets.motion_loader import AMPLoader
 
-COM_OFFSET = torch.tensor([0.011611, 0.004437, 0.000108])
+COM_OFFSET = torch.tensor([0.021112, 0.000000, -0.005366])
 HIP_OFFSETS = torch.tensor([
-    [0.1881, 0.04675, 0.],
-    [0.1881, -0.04675, 0.],
-    [-0.1881, 0.04675, 0.],
-    [-0.1881, -0.04675, 0.]]) + COM_OFFSET
+    [0.1934, 0.0465, 0.],
+    [0.1934, -0.0465, 0.],
+    [-0.1934, 0.0465, 0.],
+    [-0.1934, -0.0465, 0.]]) + COM_OFFSET
 
 class go2AMPEnv(LeggedRobot):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
@@ -28,11 +27,10 @@ class go2AMPEnv(LeggedRobot):
 
     def foot_position_in_hip_frame(self, angles, l_hip_sign=1):
         theta_ab, theta_hip, theta_knee = angles[:, 0], angles[:, 1], angles[:, 2]
-        l_up = 0.213
-        l_low = 0.213
-        l_hip = 0.072 * l_hip_sign
-        leg_distance = torch.sqrt(l_up**2 + l_low**2 +
-                                2 * l_up * l_low * torch.cos(theta_knee))
+        l_up = 0.21
+        l_low = 0.21
+        l_hip = 0.046 * l_hip_sign
+        leg_distance = torch.sqrt(l_up**2 + l_low**2 + 2 * l_up * l_low * torch.cos(theta_knee))
         eff_swing = theta_hip + theta_knee / 2
 
         off_x_hip = -leg_distance * torch.sin(eff_swing)
