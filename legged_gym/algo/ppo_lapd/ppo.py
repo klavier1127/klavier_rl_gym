@@ -125,13 +125,19 @@ class PPO:
             dones_batch,
         ) in generator:
 
+            # Teacher Policy
             self.actor_critic.act(obs_batch, privileged_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
             actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
             value_batch = self.actor_critic.evaluate(critic_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1])
-
             mu_batch = self.actor_critic.action_mean
             sigma_batch = self.actor_critic.action_std
             entropy_batch = self.actor_critic.entropy
+            teacher_dist = torch.distributions.Normal(mu_batch.detach(), sigma_batch.detach())
+            # Student Policy
+            self.actor_critic.act_student(obs_batch, obs_history_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
+            mu_stu_batch = self.actor_critic.action_stu_mean
+            sigma_stu_batch = self.actor_critic.action_stu_std
+            student_dist = torch.distributions.Normal(mu_stu_batch, sigma_stu_batch)
 
             # KL
             if self.desired_kl is not None and self.schedule == "adaptive":
@@ -164,16 +170,15 @@ class PPO:
             else:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
-            valid = torch.logical_not(dones_batch).squeeze()
             # AE loss
             latent, decoded = self.actor_critic.ae(privileged_obs_batch)
-            ae_loss = torch.nn.MSELoss()(decoded, privileged_obs_batch.detach())
+            ae_loss = nn.MSELoss()(decoded, privileged_obs_batch.detach())
             # Estimator loss
+            valid = torch.logical_not(dones_batch).squeeze()
             est_latent = self.actor_critic.estimator(obs_history_batch)
-            estimator_loss = torch.nn.MSELoss()(est_latent[valid], latent[valid].detach())
+            estimator_loss = nn.MSELoss()(est_latent[valid], latent[valid].detach())
             # Consistent loss
-            actions_student = self.actor_critic.act_student(obs_batch, obs_history_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
-            consistent_loss = (mu_batch.detach() - actions_student).pow(2).mean()
+            consistent_loss = torch.distributions.kl_divergence(teacher_dist, student_dist).mean()
 
             loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + ae_loss + estimator_loss + consistent_loss
 

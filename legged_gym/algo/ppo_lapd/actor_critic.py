@@ -41,6 +41,7 @@ class ActorCritic(nn.Module):
         # Action noise
         self.std = nn.Parameter(init_noise_std * torch.ones(num_actions))
         self.distribution = None
+        self.distribution_stu = None
         # disable args validation for speedup
         Normal.set_default_validate_args = False
 
@@ -52,6 +53,13 @@ class ActorCritic(nn.Module):
         raise NotImplementedError
 
     @property
+    def entropy(self):
+        return self.distribution.entropy().sum(dim=-1)
+
+    def get_actions_log_prob(self, actions):
+        return self.distribution.log_prob(actions).sum(dim=-1)
+
+    @property
     def action_mean(self):
         return self.distribution.mean
 
@@ -59,13 +67,21 @@ class ActorCritic(nn.Module):
     def action_std(self):
         return self.distribution.stddev
 
-    @property
-    def entropy(self):
-        return self.distribution.entropy().sum(dim=-1)
-
     def update_distribution(self, observations):
         mean = self.actor(observations)
         self.distribution = Normal(mean, mean * 0. + self.std)
+
+    @property
+    def action_stu_mean(self):
+        return self.distribution_stu.mean
+
+    @property
+    def action_stu_std(self):
+        return self.distribution_stu.stddev
+
+    def update_distribution_stu(self, observations):
+        mean = self.actor(observations)
+        self.distribution_stu = Normal(mean, mean * 0. + self.std)
 
     def act(self, observations, privileged_obs, masks=None, hidden_states=None):
         latent, _ = self.ae(privileged_obs)
@@ -78,10 +94,8 @@ class ActorCritic(nn.Module):
         latent = self.estimator(obs_history)
         input_memory = torch.cat((observations, latent), dim=-1)
         input_a = self.memory_a(input_memory, masks, hidden_states)
-        return self.actor(input_a.squeeze(0))
-
-    def get_actions_log_prob(self, actions):
-        return self.distribution.log_prob(actions).sum(dim=-1)
+        self.update_distribution_stu(input_a.squeeze(0))
+        return self.distribution_stu.sample()
 
     def act_inference(self, observations, obs_history):
         latent_mu = self.estimator(obs_history)
