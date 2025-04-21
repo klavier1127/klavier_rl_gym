@@ -125,3 +125,16 @@ class go2AMPEnv(LeggedRobot):
         dim=-1)
         return self.amp_obs_buf
 
+
+
+
+    # ================================================ Rewards ================================================== #
+    #####################     foot-pos    #################################################################
+
+    def _reward_hip_pos(self):
+        error = 0.
+        error += self.sqrdexp(10. * (self.dof_pos[:, 0]))
+        error += self.sqrdexp(10. * (self.dof_pos[:, 3]))
+        error += self.sqrdexp(10. * (self.dof_pos[:, 6]))
+        error += self.sqrdexp(10. * (self.dof_pos[:, 9]))
+        return error / 4.

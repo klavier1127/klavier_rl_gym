@@ -141,6 +141,12 @@ class go2AMPCfg(LeggedRobotCfg):
         max_contact_force = 100     # Forces above this value are penalized
 
         class scales:
+            # feet pos
+            hip_pos = 0.3
+            # base pos
+            default_dof_pos = -0.03
+            orientation = -1.
+            base_height = -1.
             # vel tracking
             tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
