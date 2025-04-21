@@ -27,9 +27,9 @@ class go2AMPEnv(LeggedRobot):
 
     def foot_position_in_hip_frame(self, angles, l_hip_sign=1):
         theta_ab, theta_hip, theta_knee = angles[:, 0], angles[:, 1], angles[:, 2]
-        l_up = 0.213
-        l_low = 0.213
-        l_hip = 0.072 * l_hip_sign
+        l_up = 0.21
+        l_low = 0.21
+        l_hip = 0.07 * l_hip_sign
         leg_distance = torch.sqrt(l_up**2 + l_low**2 + 2 * l_up * l_low * torch.cos(theta_knee))
         eff_swing = theta_hip + theta_knee / 2
 

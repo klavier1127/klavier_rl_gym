@@ -148,7 +148,7 @@ class go2AMPCfg(LeggedRobotCfg):
             lin_vel_z = -1.      # -2.
             # energy
             action_rate = -0.01      # -0.5
-            torques = -2e-4
+            torques = -1e-4
             dof_vel = -1e-3
             dof_acc = -2.5e-7
             collision = -1.0
