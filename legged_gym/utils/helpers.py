@@ -212,7 +212,7 @@ def export_policy_as_jit(actor_critic, path):
     elif hasattr(actor_critic, 'vae'):
         exporter = PolicyExporterDWAQ(actor_critic)
         exporter.export(path)
-    elif hasattr(actor_critic, 'ae'):
+    elif hasattr(actor_critic, 'estimator'):
         exporter = PolicyExporterLAPD(actor_critic)
         exporter.export(path)
     elif hasattr(actor_critic, 'memory_a'):

@@ -2,13 +2,13 @@ import torch
 import torch.nn as nn
 from torch.distributions import Normal
 
-from legged_gym.algo.ppo_lapd.estimator import AE, VAE, Estimator
+from legged_gym.algo.ppo_lapd.estimator import AE, MLPHistoryEncoder, LSTMHistoryEncoder, PrivilegedEncoder
 from legged_gym.algo.utils import unpad_trajectories
 
 
 class ActorCritic(nn.Module):
     is_recurrent = True
-    def __init__(self, num_actor_obs,
+    def __init__(self,  num_actor_obs,
                         num_critic_obs,
                         num_privileged_obs,
                         num_obs_history,
@@ -27,8 +27,8 @@ class ActorCritic(nn.Module):
             print(
                 "ActorCriticRecurrent.__init__ got unexpected arguments, which will be ignored: " + str(kwargs.keys()),
             )
-        self.ae = AE(num_privileged_obs, 4)
-        self.estimator = Estimator(num_obs_history, 4)
+        self.priv_encoder = PrivilegedEncoder(num_privileged_obs, 4)
+        self.estimator = MLPHistoryEncoder(num_obs_history, 4)
         self.memory_a = Memory(num_actor_obs+4, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.memory_c = Memory(num_critic_obs, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.actor = Actor(rnn_hidden_size, num_actions, actor_hidden_dims)
@@ -84,7 +84,7 @@ class ActorCritic(nn.Module):
         self.distribution_stu = Normal(mean, mean * 0. + self.std)
 
     def act(self, observations, privileged_obs, masks=None, hidden_states=None):
-        latent, _ = self.ae(privileged_obs)
+        latent = self.priv_encoder(privileged_obs)
         input_memory = torch.cat((observations, latent), dim=-1)
         input_a = self.memory_a(input_memory, masks, hidden_states)
         self.update_distribution(input_a.squeeze(0))

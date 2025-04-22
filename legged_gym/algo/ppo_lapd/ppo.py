@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
 from .actor_critic import ActorCritic
 from .rollout_storage import RolloutStorage
 
@@ -100,7 +99,6 @@ class PPO:
     def update(self):
         mean_value_loss = 0
         mean_surrogate_loss = 0
-        mean_ae_loss = 0
         mean_estimator_loss = 0
         mean_consistent_loss = 0
 
@@ -170,17 +168,15 @@ class PPO:
             else:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
-            # AE loss
-            latent, decoded = self.actor_critic.ae(privileged_obs_batch)
-            ae_loss = nn.MSELoss()(decoded, privileged_obs_batch.detach())
             # Estimator loss
             valid = torch.logical_not(dones_batch).squeeze()
+            latent = self.actor_critic.priv_encoder(privileged_obs_batch)
             est_latent = self.actor_critic.estimator(obs_history_batch)
             estimator_loss = nn.MSELoss()(est_latent[valid], latent[valid].detach())
             # Consistent loss
-            consistent_loss = torch.distributions.kl_divergence(teacher_dist, student_dist).mean()
+            consistent_loss = torch.distributions.kl_divergence(student_dist, teacher_dist).mean()
 
-            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + ae_loss + estimator_loss + consistent_loss
+            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + estimator_loss + consistent_loss
 
             # Gradient step
             self.optimizer.zero_grad()
@@ -190,17 +186,14 @@ class PPO:
 
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
-            mean_ae_loss += ae_loss.item()
             mean_estimator_loss += estimator_loss.item()
             mean_consistent_loss += consistent_loss.item()
-
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
-        mean_ae_loss /= num_updates
         mean_estimator_loss /= num_updates
         mean_consistent_loss /= num_updates
         self.storage.clear()
 
-        return mean_value_loss, mean_surrogate_loss, mean_ae_loss, mean_estimator_loss, mean_consistent_loss
+        return mean_value_loss, mean_surrogate_loss, mean_estimator_loss, mean_consistent_loss

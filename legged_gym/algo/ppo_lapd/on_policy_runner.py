@@ -112,7 +112,7 @@ class LAPDOnPolicyRunner:
                 start = stop
                 self.alg.compute_returns(critic_obs)
 
-            mean_value_loss, mean_surrogate_loss, mean_ae_loss, mean_estimator_loss, mean_consistent_loss = self.alg.update()
+            mean_value_loss, mean_surrogate_loss, mean_estimator_loss, mean_consistent_loss = self.alg.update()
 
             stop = time.time()
             learn_time = stop - start
@@ -149,7 +149,6 @@ class LAPDOnPolicyRunner:
 
         self.writer.add_scalar('Loss/value_function', locs['mean_value_loss'], locs['it'])
         self.writer.add_scalar('Loss/surrogate', locs['mean_surrogate_loss'], locs['it'])
-        self.writer.add_scalar('Loss/ae', locs['mean_ae_loss'], locs['it'])
         self.writer.add_scalar('Loss/estimator', locs['mean_estimator_loss'], locs['it'])
         self.writer.add_scalar('Loss/consistent', locs['mean_consistent_loss'], locs['it'])
         self.writer.add_scalar('Loss/learning_rate', self.alg.learning_rate, locs['it'])
@@ -172,7 +171,6 @@ class LAPDOnPolicyRunner:
                               'collection_time']:.3f}s, learning {locs['learn_time']:.3f}s)\n"""
                           f"""{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"""
                           f"""{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"""
-                          f"""{'AE loss:':>{pad}} {locs['mean_ae_loss']:.4f}\n"""
                           f"""{'Estimator loss:':>{pad}} {locs['mean_estimator_loss']:.4f}\n"""
                           f"""{'Consistent loss:':>{pad}} {locs['mean_consistent_loss']:.4f}\n"""
                           f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
@@ -187,7 +185,6 @@ class LAPDOnPolicyRunner:
                               'collection_time']:.3f}s, learning {locs['learn_time']:.3f}s)\n"""
                           f"""{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"""
                           f"""{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"""
-                          f"""{'AE loss:':>{pad}} {locs['mean_ae_loss']:.4f}\n"""
                           f"""{'Estimator loss:':>{pad}} {locs['mean_estimator_loss']:.4f}\n"""
                           f"""{'Consistent loss:':>{pad}} {locs['mean_consistent_loss']:.4f}\n"""
                           f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n""")

@@ -3,7 +3,6 @@ import torch
 from legged_gym.envs import LeggedRobot
 
 
-
 class g1Env(LeggedRobot):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
@@ -79,11 +78,7 @@ class g1Env(LeggedRobot):
         self.obs_history_buf = torch.cat([self.obs_history[i] for i in range(self.cfg.env.o_h_frame_stack)], dim=1)
 
     def get_privileged_observations(self):
-        noise_vec = torch.zeros(self.cfg.env.num_privileged_obs, device=self.device)
-        noise_vec[0: 3] = 0.0 #0.1   # lin_vel
-        noise_vec[3: 4] = 0.0 #0.02  # base_z
-        noise_vec[4: 6] = 0.0 #0.2   # contact
-        self.privileged_obs_buf = self.privileged_obs.clone() + (2 * torch.rand_like(self.privileged_obs) -1) * noise_vec * self.cfg.noise.noise_level
+        self.privileged_obs_buf = self.privileged_obs.clone()
         return self.privileged_obs_buf
 
     def get_observations_history(self):
@@ -111,4 +106,9 @@ class g1Env(LeggedRobot):
         reward = 1. * (self.contacts == walk_mask)
         return torch.mean(reward, dim=1)
 
+    # def _reward_feet_height(self):
+    #     contact_foot = torch.min(self.feet_pos[:, 0, 2], self.feet_pos[:, 1, 2])
+    #     swing_foot = torch.max(self.feet_pos[:, 0, 2], self.feet_pos[:, 1, 2])
+    #     reward = (swing_foot - contact_foot - self.cfg.rewards.target_feet_height) > -0.01
+    #     return reward
 

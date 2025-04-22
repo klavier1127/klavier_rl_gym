@@ -1,10 +1,6 @@
 import torch.nn as nn
 import torch
 from legged_gym.algo.utils.torch_utils import  get_activation,check_cnnoutput
-from torch.distributions import Normal
-
-
-
 
 
 
@@ -31,90 +27,26 @@ class AE(nn.Module):
 
 
 
-
-
-
-
-
-class VAE(nn.Module):
-    def __init__(self, num_obs_history, latent_num, recons_num):
-        super(VAE, self).__init__()
-        self.num_obs_history = num_obs_history
-
+class PrivilegedEncoder(nn.Module):
+    def __init__(self, priv_num, latent_num):
+        super(PrivilegedEncoder, self).__init__()
         # Build Encoder
         self.encoder = nn.Sequential(
-            nn.Linear(num_obs_history, 512),
+            nn.Linear(priv_num, 64),
             nn.ELU(),
-            nn.Linear(512, 256),
-            nn.ELU(),
-            nn.Linear(256, 128),
+            nn.Linear(64, latent_num),
         )
-
-        self.latent_mu = nn.Linear(128, latent_num)
-        self.latent_var = nn.Linear(128, latent_num)
-
-        # Build Decoder
-        self.decoder = nn.Sequential(
-            nn.Linear(latent_num, 128),
-            nn.ELU(),
-            nn.Linear(128, 256),
-            nn.ELU(),
-            nn.Linear(256, recons_num),
-        )
-
-    def encode(self, obs_history):
-        encoded = self.encoder(obs_history)
-        latent_mu = self.latent_mu(encoded)
-        latent_var = self.latent_var(encoded)
-        return [latent_mu, latent_var]
-
-    def decode(self, latent):
-        recons = self.decoder(latent)
-        return recons
 
     def forward(self, obs_history):
-        latent_mu, latent_var = self.encode(obs_history)
-        latent = self.reparameterize(latent_mu, latent_var)
-        return latent, latent_mu, latent_var
-
-    def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
-        std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
-        return eps * std + mu
-
-    def loss_fn(self, obs_history, ref_latent, priv_obs, kld_weight=1.0):
-        est_latent, latent_mu, latent_var = self.forward(obs_history)
-        # supervised loss
-        supervised_loss = torch.nn.MSELoss()(est_latent, ref_latent)
-        # recons loss
-        recons = self.decode(est_latent)
-        recons_loss = torch.nn.MSELoss()(recons, priv_obs)
-        # kl loss
-        kld_loss = -0.5 * torch.sum(1 + latent_var - latent_mu ** 2 - latent_var.exp(), dim=-1)
-        total_loss = supervised_loss + recons_loss# + kld_weight * kld_loss
-        return total_loss
-
-    # 输出采样值（student）
-    def sample(self, obs_history):
-        latent, latent_mu, latent_var = self.forward(obs_history)
+        latent = self.encoder(obs_history)
         return latent
 
-    # 输出均值（teacher）
-    def inference(self, obs_history):
-        latent, latent_mu, latent_var = self.forward(obs_history)
-        return latent_mu
 
 
 
-
-
-
-
-
-
-class Estimator(nn.Module):
+class MLPHistoryEncoder(nn.Module):
     def __init__(self, obs_history, latent_num):
-        super(Estimator, self).__init__()
+        super(MLPHistoryEncoder, self).__init__()
         # Build Encoder
         self.encoder = nn.Sequential(
             nn.Linear(obs_history, 512),
@@ -128,6 +60,30 @@ class Estimator(nn.Module):
         latent = self.encoder(obs_history)
         return latent
 
+
+
+
+class LSTMHistoryEncoder(nn.Module):
+    def __init__(self, obs_history, latent_num, hidden_size, num_layers):
+        super(LSTMHistoryEncoder, self).__init__()
+        # Build Encoder
+        self.lstm_encoder = nn.LSTM(
+            input_size=obs_history,
+            hidden_size=hidden_size,
+            num_layers=num_layers,
+            batch_first=True,
+        )
+
+        self.fc =  nn.Sequential(
+            nn.Linear(hidden_size, 32),
+            nn.ELU(),
+            nn.Linear(32, latent_num)
+        )
+
+    def forward(self, obs_history):
+        lstm_out, _ = self.lstm_encoder(obs_history)
+        latent = self.fc(lstm_out[:, -1, :])
+        return latent
 
 
 
@@ -196,43 +152,72 @@ class TCNHistoryEncoder(nn.Module):
 
 
 
-class MLPHistoryEncoder(nn.Module):
-    def __init__(self,
-                 num_obs,
-                 num_history,
-                 num_latent,
-                 activation='elu',
-                 adaptation_module_branch_hidden_dims=[256, 128], ):
-        super(MLPHistoryEncoder, self).__init__()
-        self.num_obs = num_obs
-        self.num_history = num_history
-        self.num_latent = num_latent
 
-        input_size = num_obs * num_history
-        output_size = num_latent
 
-        activation = get_activation(activation)
+class VAE(nn.Module):
+    def __init__(self, num_obs_history, latent_num, recons_num):
+        super(VAE, self).__init__()
+        self.num_obs_history = num_obs_history
 
-        # Adaptation module
-        adaptation_module_layers = []
-        adaptation_module_layers.append(nn.Linear(input_size, adaptation_module_branch_hidden_dims[0]))
-        adaptation_module_layers.append(activation)
-        for l in range(len(adaptation_module_branch_hidden_dims)):
-            if l == len(adaptation_module_branch_hidden_dims) - 1:
-                adaptation_module_layers.append(
-                    nn.Linear(adaptation_module_branch_hidden_dims[l], output_size))
-            else:
-                adaptation_module_layers.append(
-                    nn.Linear(adaptation_module_branch_hidden_dims[l],
-                              adaptation_module_branch_hidden_dims[l + 1]))
-                adaptation_module_layers.append(activation)
-        self.encoder = nn.Sequential(*adaptation_module_layers)
+        # Build Encoder
+        self.encoder = nn.Sequential(
+            nn.Linear(num_obs_history, 512),
+            nn.ELU(),
+            nn.Linear(512, 256),
+            nn.ELU(),
+            nn.Linear(256, 128),
+        )
+
+        self.latent_mu = nn.Linear(128, latent_num)
+        self.latent_var = nn.Linear(128, latent_num)
+
+        # Build Decoder
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_num, 128),
+            nn.ELU(),
+            nn.Linear(128, 256),
+            nn.ELU(),
+            nn.Linear(256, recons_num),
+        )
+
+    def encode(self, obs_history):
+        encoded = self.encoder(obs_history)
+        latent_mu = self.latent_mu(encoded)
+        latent_var = self.latent_var(encoded)
+        return [latent_mu, latent_var]
+
+    def decode(self, latent):
+        recons = self.decoder(latent)
+        return recons
 
     def forward(self, obs_history):
-        """
-        obs_history.shape = (bz, T , obs_dim)
-        """
-        bs = obs_history.shape[0]
-        T = self.num_history
-        output = self.encoder(obs_history.reshape(bs, -1))
-        return output
+        latent_mu, latent_var = self.encode(obs_history)
+        latent = self.reparameterize(latent_mu, latent_var)
+        return latent, latent_mu, latent_var
+
+    def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return eps * std + mu
+
+    def loss_fn(self, obs_history, ref_latent, priv_obs, kld_weight=1.0):
+        est_latent, latent_mu, latent_var = self.forward(obs_history)
+        # supervised loss
+        supervised_loss = torch.nn.MSELoss()(est_latent, ref_latent)
+        # recons loss
+        recons = self.decode(est_latent)
+        recons_loss = torch.nn.MSELoss()(recons, priv_obs)
+        # kl loss
+        kld_loss = -0.5 * torch.sum(1 + latent_var - latent_mu ** 2 - latent_var.exp(), dim=-1)
+        total_loss = supervised_loss + recons_loss  # + kld_weight * kld_loss
+        return total_loss
+
+    # 输出采样值（student）
+    def sample(self, obs_history):
+        latent, latent_mu, latent_var = self.forward(obs_history)
+        return latent
+
+    # 输出均值（teacher）
+    def inference(self, obs_history):
+        latent, latent_mu, latent_var = self.forward(obs_history)
+        return latent_mu
