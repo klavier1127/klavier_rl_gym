@@ -33,8 +33,9 @@ class PrivilegedEncoder(nn.Module):
         # Build Encoder
         self.encoder = nn.Sequential(
             nn.Linear(priv_num, 64),
-            nn.ELU(),
+            nn.ReLU(),
             nn.Linear(64, latent_num),
+            nn.Tanh(),
         )
 
     def forward(self, obs_history):

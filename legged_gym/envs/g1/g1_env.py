@@ -38,7 +38,6 @@ class g1Env(LeggedRobot):
     def compute_observations(self):
         phase_sin = torch.sin(2 * torch.pi * self.phase)
         phase_cos = torch.cos(2 * torch.pi * self.phase)
-
         self.privileged_obs = torch.cat((
             self.base_lin_vel * self.obs_scales.lin_vel,
             (self.root_states[:, 2].unsqueeze(1) - self.feet_pos[:, :, 2] - self.cfg.rewards.base_height_target) * 10.,

@@ -36,6 +36,7 @@ class PPO:
         self.actor_critic.to(self.device)
         self.storage = None  # initialized later
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
+        self.estimator_optimizer = optim.Adam(self.actor_critic.estimator.parameters(), lr=learning_rate)
         self.transition = RolloutStorage.Transition()
 
         # PPO parameters
@@ -168,21 +169,28 @@ class PPO:
             else:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
-            # Estimator loss
-            valid = torch.logical_not(dones_batch).squeeze()
-            latent = self.actor_critic.priv_encoder(privileged_obs_batch)
-            est_latent = self.actor_critic.estimator(obs_history_batch)
-            estimator_loss = nn.MSELoss()(est_latent[valid], latent[valid].detach())
             # Consistent loss
             consistent_loss = torch.distributions.kl_divergence(student_dist, teacher_dist).mean()
 
-            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + estimator_loss + consistent_loss
+            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + consistent_loss
 
             # Gradient step
             self.optimizer.zero_grad()
             loss.backward()
             nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
             self.optimizer.step()
+
+            # Estimator loss
+            valid = torch.logical_not(dones_batch).squeeze()
+            latent = self.actor_critic.priv_encoder(privileged_obs_batch)
+            est_latent = self.actor_critic.estimator(obs_history_batch)
+            estimator_loss = nn.MSELoss()(est_latent[valid], latent[valid].detach())
+
+            # Gradient step
+            self.estimator_optimizer.zero_grad()
+            estimator_loss.backward()
+            nn.utils.clip_grad_norm_(self.actor_critic.estimator.parameters(), self.max_grad_norm)
+            self.estimator_optimizer.step()
 
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
