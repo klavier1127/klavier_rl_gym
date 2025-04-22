@@ -87,16 +87,15 @@ class g1Env(LeggedRobot):
 
     # ================================================ Rewards ================================================== #
     #####################     foot-pos    #################################################################
-    def _reward_hip_pos(self):
-        error = 0.
-        error += self.sqrdexp(10. * (self.dof_pos[:, 1]))
-        error += self.sqrdexp(10. * (self.dof_pos[:, 7]))
-        error += self.sqrdexp(10. * (self.dof_pos[:, 2]))
-        error += self.sqrdexp(10. * (self.dof_pos[:, 8]))
-        return error / 4.
-
     # def _reward_hip_pos(self):
-    #     return torch.sum(torch.square(self.dof_pos[:, [1, 2, 7, 8]] - self.default_dof_pos[:, [1, 2, 7, 8]]), dim=1)
+    #     error = self.sqrdexp(10. * (self.dof_pos[:, 1]))
+    #     error += self.sqrdexp(10. * (self.dof_pos[:, 2]))
+    #     error += self.sqrdexp(10. * (self.dof_pos[:, 7]))
+    #     error += self.sqrdexp(10. * (self.dof_pos[:, 8]))
+    #     return error / 4.
+
+    def _reward_hip_pos(self):
+        return torch.sum(torch.square(self.dof_pos[:, [1, 2, 7, 8]] - self.default_dof_pos[:, [1, 2, 7, 8]]), dim=1)
 
     def _reward_ankle_pos(self):
         return torch.sum(torch.square(self.dof_pos[:, [4, 5, 10, 11]] - self.default_dof_pos[:, [4, 5, 10, 11]]), dim=1)
