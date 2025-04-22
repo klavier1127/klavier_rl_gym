@@ -36,7 +36,6 @@ class PPO:
         self.actor_critic.to(self.device)
         self.storage = None  # initialized later
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
-        self.estimator_optimizer = optim.Adam(self.actor_critic.estimator.parameters(), lr=learning_rate)
         self.transition = RolloutStorage.Transition()
 
         # PPO parameters
@@ -131,12 +130,14 @@ class PPO:
             mu_batch = self.actor_critic.action_mean
             sigma_batch = self.actor_critic.action_std
             entropy_batch = self.actor_critic.entropy
-            teacher_dist = torch.distributions.Normal(mu_batch.detach(), sigma_batch.detach())
+            mu_batch_clone = mu_batch.clone()
+            sigma_batch_clone = sigma_batch.clone()
+            teacher_dist = torch.distributions.Normal(mu_batch_clone.detach(), sigma_batch_clone.detach())
             # Student Policy
             self.actor_critic.act_student(obs_batch, obs_history_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
             mu_stu_batch = self.actor_critic.action_stu_mean
             sigma_stu_batch = self.actor_critic.action_stu_std
-            student_dist = torch.distributions.Normal(mu_stu_batch, sigma_stu_batch)
+            student_dist = torch.distributions.Normal(mu_stu_batch.detach(), sigma_stu_batch.detach())
 
             # KL
             if self.desired_kl is not None and self.schedule == "adaptive":
@@ -169,28 +170,21 @@ class PPO:
             else:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
+            # Estimator loss
+            valid = torch.logical_not(dones_batch).squeeze()
+            latent = self.actor_critic.priv_encoder(privileged_obs_batch)
+            est_latent = self.actor_critic.estimator(obs_history_batch)
+            estimator_loss = nn.MSELoss()(est_latent[valid], latent[valid].detach())
             # Consistent loss
             consistent_loss = torch.distributions.kl_divergence(student_dist, teacher_dist).mean()
 
-            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + consistent_loss
+            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + consistent_loss + estimator_loss
 
             # Gradient step
             self.optimizer.zero_grad()
             loss.backward()
             nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
             self.optimizer.step()
-
-            # Estimator loss
-            valid = torch.logical_not(dones_batch).squeeze()
-            latent = self.actor_critic.priv_encoder(privileged_obs_batch)
-            est_latent = self.actor_critic.estimator(obs_history_batch)
-            estimator_loss = nn.MSELoss()(est_latent[valid], latent[valid].detach())
-
-            # Gradient step
-            self.estimator_optimizer.zero_grad()
-            estimator_loss.backward()
-            nn.utils.clip_grad_norm_(self.actor_critic.estimator.parameters(), self.max_grad_norm)
-            self.estimator_optimizer.step()
 
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()

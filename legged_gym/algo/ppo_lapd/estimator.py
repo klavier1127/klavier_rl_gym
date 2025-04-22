@@ -32,10 +32,11 @@ class PrivilegedEncoder(nn.Module):
         super(PrivilegedEncoder, self).__init__()
         # Build Encoder
         self.encoder = nn.Sequential(
-            nn.Linear(priv_num, 64),
-            nn.ReLU(),
+            nn.Linear(priv_num, 128),
+            nn.ELU(),
+            nn.Linear(128, 64),
+            nn.ELU(),
             nn.Linear(64, latent_num),
-            nn.Tanh(),
         )
 
     def forward(self, obs_history):

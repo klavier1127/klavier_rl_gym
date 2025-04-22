@@ -27,9 +27,9 @@ class ActorCritic(nn.Module):
             print(
                 "ActorCriticRecurrent.__init__ got unexpected arguments, which will be ignored: " + str(kwargs.keys()),
             )
-        self.priv_encoder = PrivilegedEncoder(num_privileged_obs, 13)
-        self.estimator = MLPHistoryEncoder(num_obs_history, 13)
-        self.memory_a = Memory(num_actor_obs+13, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
+        self.priv_encoder = PrivilegedEncoder(num_privileged_obs, 4)
+        self.estimator = MLPHistoryEncoder(num_obs_history, 4)
+        self.memory_a = Memory(num_actor_obs+4, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.memory_c = Memory(num_critic_obs, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.actor = Actor(rnn_hidden_size, num_actions, actor_hidden_dims)
         self.critic = Critic(rnn_hidden_size, critic_hidden_dims)
