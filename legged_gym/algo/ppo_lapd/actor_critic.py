@@ -79,14 +79,15 @@ class ActorCritic(nn.Module):
         return self.distribution.sample()
 
     def act_student(self, observations, obs_history, masks=None, hidden_states=None):
-        latent = self.adaptation(obs_history)
-        input_memory = torch.cat((observations, latent), dim=-1)
+        latent = self.adaptation.get_ada(obs_history)
+        with torch.no_grad():
+            input_memory = torch.cat((observations, latent), dim=-1)
         input_a = self.memory_a(input_memory, masks, hidden_states)
         actions_mu = self.actor(input_a.squeeze(0))
         return actions_mu
 
     def act_inference(self, observations, obs_history):
-        latent = self.adaptation(obs_history)
+        latent = self.adaptation.get_ada(obs_history)
         input_memory = torch.cat((observations, latent), dim=-1)
         input_a = self.memory_a(input_memory)
         return self.actor(input_a.squeeze(0))

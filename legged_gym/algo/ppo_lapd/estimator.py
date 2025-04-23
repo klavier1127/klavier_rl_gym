@@ -231,8 +231,26 @@ class Adaptation(nn.Module):
             nn.Linear(128, latent_num),
         )
 
+        self.adaptation = nn.Sequential(
+            nn.Linear(latent_num, 128),
+            nn.ELU(),
+            nn.Linear(128, 64),
+            nn.ELU(),
+            nn.Linear(64, latent_num),
+        )
+
+        self.norm = nn.LayerNorm(latent_num)
+
     def forward(self, obs_history):
+        pass
+
+    def get_mu(self, obs_history):
         latent = self.history_encoder(obs_history)
         return latent
 
-
+    def get_ada(self, obs_history):
+        with torch.no_grad():
+            latent = self.history_encoder(obs_history)
+        delta = self.adaptation(latent)
+        latent_ada = self.norm(latent + delta)
+        return latent_ada

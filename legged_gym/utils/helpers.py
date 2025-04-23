@@ -346,7 +346,7 @@ class PolicyExporterLAPD(torch.nn.Module):
         self.register_buffer(f'cell_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
 
     def forward(self, obs, obs_history):
-        latent = self.adaptation(obs_history)
+        latent = self.adaptation.get_ada(obs_history)
         input_m = torch.cat((obs, latent), dim=-1)
         out, (h, c) = self.memory(input_m.unsqueeze(0), (self.hidden_state, self.cell_state))
         self.hidden_state[:] = h

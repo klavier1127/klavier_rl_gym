@@ -163,7 +163,7 @@ class PPO:
 
             # Estimator loss
             latent = self.actor_critic.priv_encoder(privileged_obs_batch)
-            est_latent = self.actor_critic.adaptation(obs_history_batch)
+            est_latent = self.actor_critic.adaptation.get_mu(obs_history_batch)
             estimator_loss = nn.MSELoss()(est_latent, latent.detach())
 
             # Alignment loss
