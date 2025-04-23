@@ -31,7 +31,6 @@ def play(args):
     env.set_camera(env_cfg.viewer.pos, env_cfg.viewer.lookat)
 
     obs = env.get_observations()
-    critic_obs = env.get_critic_observations()
     obs_history = env.get_observations_history()
     # load policy
     train_cfg.runner.resume = True

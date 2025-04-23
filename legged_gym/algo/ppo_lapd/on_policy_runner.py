@@ -112,7 +112,7 @@ class LAPDOnPolicyRunner:
                 start = stop
                 self.alg.compute_returns(critic_obs)
 
-            mean_value_loss, mean_surrogate_loss, mean_estimator_loss, mean_consistent_loss = self.alg.update()
+            mean_value_loss, mean_surrogate_loss, mean_estimator_loss, mean_alignment_loss = self.alg.update()
 
             stop = time.time()
             learn_time = stop - start
@@ -150,7 +150,7 @@ class LAPDOnPolicyRunner:
         self.writer.add_scalar('Loss/value_function', locs['mean_value_loss'], locs['it'])
         self.writer.add_scalar('Loss/surrogate', locs['mean_surrogate_loss'], locs['it'])
         self.writer.add_scalar('Loss/estimator', locs['mean_estimator_loss'], locs['it'])
-        self.writer.add_scalar('Loss/consistent', locs['mean_consistent_loss'], locs['it'])
+        self.writer.add_scalar('Loss/alignment', locs['mean_alignment_loss'], locs['it'])
         self.writer.add_scalar('Loss/learning_rate', self.alg.learning_rate, locs['it'])
         self.writer.add_scalar('Policy/mean_noise_std', mean_std.item(), locs['it'])
         self.writer.add_scalar('Perf/total_fps', fps, locs['it'])
@@ -172,7 +172,7 @@ class LAPDOnPolicyRunner:
                           f"""{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"""
                           f"""{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"""
                           f"""{'Estimator loss:':>{pad}} {locs['mean_estimator_loss']:.4f}\n"""
-                          f"""{'Consistent loss:':>{pad}} {locs['mean_consistent_loss']:.4f}\n"""
+                          f"""{'Alignment loss:':>{pad}} {locs['mean_alignment_loss']:.4f}\n"""
                           f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
                           f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
                           f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n""")
@@ -186,7 +186,7 @@ class LAPDOnPolicyRunner:
                           f"""{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"""
                           f"""{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"""
                           f"""{'Estimator loss:':>{pad}} {locs['mean_estimator_loss']:.4f}\n"""
-                          f"""{'Consistent loss:':>{pad}} {locs['mean_consistent_loss']:.4f}\n"""
+                          f"""{'Alignment loss:':>{pad}} {locs['mean_alignment_loss']:.4f}\n"""
                           f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n""")
             #   f"""{'Mean reward/step:':>{pad}} {locs['mean_reward']:.2f}\n"""
             #   f"""{'Mean episode length/episode:':>{pad}} {locs['mean_trajectory_length']:.2f}\n""")

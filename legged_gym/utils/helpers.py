@@ -212,7 +212,7 @@ def export_policy_as_jit(actor_critic, path):
     elif hasattr(actor_critic, 'vae'):
         exporter = PolicyExporterDWAQ(actor_critic)
         exporter.export(path)
-    elif hasattr(actor_critic, 'estimator'):
+    elif hasattr(actor_critic, 'adaptation'):
         exporter = PolicyExporterLAPD(actor_critic)
         exporter.export(path)
     elif hasattr(actor_critic, 'memory_a'):
@@ -340,13 +340,13 @@ class PolicyExporterLAPD(torch.nn.Module):
         self.actor = copy.deepcopy(actor_critic.actor)
         self.is_recurrent = actor_critic.is_recurrent
         self.memory = copy.deepcopy(actor_critic.memory_a.rnn)
-        self.estimator = copy.deepcopy(actor_critic.estimator)
+        self.adaptation = copy.deepcopy(actor_critic.adaptation)
         self.memory.cpu()
         self.register_buffer(f'hidden_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
         self.register_buffer(f'cell_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
 
     def forward(self, obs, obs_history):
-        latent = self.estimator(obs_history)
+        latent = self.adaptation(obs_history)
         input_m = torch.cat((obs, latent), dim=-1)
         out, (h, c) = self.memory(input_m.unsqueeze(0), (self.hidden_state, self.cell_state))
         self.hidden_state[:] = h

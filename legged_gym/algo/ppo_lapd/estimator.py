@@ -4,28 +4,6 @@ from legged_gym.algo.utils.torch_utils import  get_activation,check_cnnoutput
 
 
 
-class AE(nn.Module):
-    def __init__(self, input_num, output_num):
-        super(AE, self).__init__()
-
-        self.encoder = nn.Sequential(
-            nn.Linear(input_num, 32),
-            nn.ELU(),
-            nn.Linear(32, output_num),
-        )
-
-        self.decoder = nn.Sequential(
-            nn.Linear(output_num, 32),
-            nn.ELU(),
-            nn.Linear(32, input_num),
-        )
-
-    def forward(self, env_obs):
-        encoded = self.encoder(env_obs)
-        decoded = self.decoder(encoded)
-        return encoded, decoded
-
-
 
 class PrivilegedEncoder(nn.Module):
     def __init__(self, priv_num, latent_num):
@@ -55,7 +33,9 @@ class MLPHistoryEncoder(nn.Module):
             nn.ELU(),
             nn.Linear(512, 256),
             nn.ELU(),
-            nn.Linear(256, latent_num)
+            nn.Linear(256, 128),
+            nn.ELU(),
+            nn.Linear(128, latent_num),
         )
 
     def forward(self, obs_history):
@@ -170,8 +150,16 @@ class VAE(nn.Module):
             nn.Linear(256, 128),
         )
 
-        self.latent_mu = nn.Linear(128, latent_num)
-        self.latent_var = nn.Linear(128, latent_num)
+        self.latent_mu = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ELU(),
+            nn.Linear(64, latent_num),
+        )
+        self.latent_var = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ELU(),
+            nn.Linear(64, latent_num),
+        )
 
         # Build Decoder
         self.decoder = nn.Sequential(
@@ -223,3 +211,28 @@ class VAE(nn.Module):
     def inference(self, obs_history):
         latent, latent_mu, latent_var = self.forward(obs_history)
         return latent_mu
+
+
+
+
+class Adaptation(nn.Module):
+    def __init__(self, num_obs_history, latent_num):
+        super(Adaptation, self).__init__()
+        self.num_obs_history = num_obs_history
+
+        # Build Encoder
+        self.history_encoder = nn.Sequential(
+            nn.Linear(num_obs_history, 512),
+            nn.ELU(),
+            nn.Linear(512, 256),
+            nn.ELU(),
+            nn.Linear(256, 128),
+            nn.ELU(),
+            nn.Linear(128, latent_num),
+        )
+
+    def forward(self, obs_history):
+        latent = self.history_encoder(obs_history)
+        return latent
+
+

@@ -99,7 +99,7 @@ class PPO:
         mean_value_loss = 0
         mean_surrogate_loss = 0
         mean_estimator_loss = 0
-        mean_consistent_loss = 0
+        mean_alignment_loss = 0
 
         if self.actor_critic.is_recurrent:
             generator = self.storage.reccurent_mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
@@ -162,19 +162,16 @@ class PPO:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
             # Estimator loss
-            valid = torch.logical_not(dones_batch).squeeze()
             latent = self.actor_critic.priv_encoder(privileged_obs_batch)
-            est_latent = self.actor_critic.estimator(obs_history_batch)
-            estimator_loss = nn.MSELoss()(est_latent[valid], latent[valid].detach())
+            est_latent = self.actor_critic.adaptation(obs_history_batch)
+            estimator_loss = nn.MSELoss()(est_latent, latent.detach())
 
-            # Consistent loss
+            # Alignment loss
             actions_expert = mu_batch.clone()
             actions_stu = self.actor_critic.act_student(obs_batch, obs_history_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
-            consistent_loss = nn.MSELoss()(actions_stu, actions_expert.detach())
+            alignment_loss = nn.MSELoss()(actions_stu, actions_expert.detach())
 
-            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + estimator_loss
-            if estimator_loss.item() < 0.03:
-                loss += consistent_loss
+            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + estimator_loss + alignment_loss
 
             # Gradient step
             self.optimizer.zero_grad()
@@ -185,13 +182,13 @@ class PPO:
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
             mean_estimator_loss += estimator_loss.item()
-            mean_consistent_loss += consistent_loss.item()
+            mean_alignment_loss += alignment_loss.item()
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
         mean_estimator_loss /= num_updates
-        mean_consistent_loss /= num_updates
+        mean_alignment_loss /= num_updates
         self.storage.clear()
 
-        return mean_value_loss, mean_surrogate_loss, mean_estimator_loss, mean_consistent_loss
+        return mean_value_loss, mean_surrogate_loss, mean_estimator_loss, mean_alignment_loss
