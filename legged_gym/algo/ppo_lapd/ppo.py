@@ -49,7 +49,6 @@ class PPO:
         self.max_grad_norm = max_grad_norm
         self.use_clipped_value_loss = use_clipped_value_loss
 
-
     def init_storage(self, num_envs, num_transitions_per_env, actor_obs_shape, critic_obs_shape,
                      privileged_obs_shape, obs_history_shape, action_shape):
         self.storage = RolloutStorage(
@@ -130,14 +129,6 @@ class PPO:
             mu_batch = self.actor_critic.action_mean
             sigma_batch = self.actor_critic.action_std
             entropy_batch = self.actor_critic.entropy
-            mu_batch_clone = mu_batch.clone()
-            sigma_batch_clone = sigma_batch.clone()
-            teacher_dist = torch.distributions.Normal(mu_batch_clone.detach(), sigma_batch_clone.detach())
-            # Student Policy
-            self.actor_critic.act_student(obs_batch, obs_history_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
-            mu_stu_batch = self.actor_critic.action_stu_mean
-            sigma_stu_batch = self.actor_critic.action_stu_std
-            student_dist = torch.distributions.Normal(mu_stu_batch.detach(), sigma_stu_batch.detach())
 
             # KL
             if self.desired_kl is not None and self.schedule == "adaptive":
@@ -175,10 +166,15 @@ class PPO:
             latent = self.actor_critic.priv_encoder(privileged_obs_batch)
             est_latent = self.actor_critic.estimator(obs_history_batch)
             estimator_loss = nn.MSELoss()(est_latent[valid], latent[valid].detach())
-            # Consistent loss
-            consistent_loss = torch.distributions.kl_divergence(student_dist, teacher_dist).mean()
 
-            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + consistent_loss + estimator_loss
+            # Consistent loss
+            actions_expert = mu_batch.clone()
+            actions_stu = self.actor_critic.act_student(obs_batch, obs_history_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
+            consistent_loss = nn.MSELoss()(actions_stu, actions_expert.detach())
+
+            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + estimator_loss
+            if estimator_loss.item() < 0.03:
+                loss += consistent_loss
 
             # Gradient step
             self.optimizer.zero_grad()
