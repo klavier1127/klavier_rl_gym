@@ -163,7 +163,7 @@ class x2Cfg(LeggedRobotCfg):
             base_height = -1.
 
             # energy
-            action_rate = -0.03
+            action_rate = -0.01
             torques = -1e-5
             dof_vel = -1e-3
             dof_acc = -2.5e-7

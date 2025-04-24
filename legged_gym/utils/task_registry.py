@@ -7,7 +7,7 @@ from legged_gym.algo.ppo import OnPolicyRunner
 from legged_gym.algo.ppo_recurrent import RNNOnPolicyRunner
 from legged_gym.algo.ppo_rma import RMAOnPolicyRunner
 from legged_gym.algo.ppo_dwaq import DWAQOnPolicyRunner
-from legged_gym.algo.ppo_lapd import LAPDOnPolicyRunner
+from legged_gym.algo.ppo_lpd import LPDOnPolicyRunner
 from legged_gym.algo.ppo_amp import AMPOnPolicyRunner
 
 from legged_gym import LEGGED_GYM_ROOT_DIR

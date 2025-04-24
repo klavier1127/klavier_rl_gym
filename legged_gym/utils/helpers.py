@@ -197,7 +197,7 @@ def get_args():
         description="RL Policy", custom_parameters=custom_parameters
     )
 
-    # name allignment
+    # name alignment
     args.sim_device_id = args.compute_device_id
     args.sim_device = args.sim_device_type
     if args.sim_device == "cuda":
@@ -213,7 +213,7 @@ def export_policy_as_jit(actor_critic, path):
         exporter = PolicyExporterDWAQ(actor_critic)
         exporter.export(path)
     elif hasattr(actor_critic, 'adaptation'):
-        exporter = PolicyExporterLAPD(actor_critic)
+        exporter = PolicyExporterLPD(actor_critic)
         exporter.export(path)
     elif hasattr(actor_critic, 'memory_a'):
         rnn = actor_critic.memory_a.rnn
@@ -334,7 +334,7 @@ class PolicyExporterDWAQ(torch.nn.Module):
         traced_script_module.save(path)
 
 
-class PolicyExporterLAPD(torch.nn.Module):
+class PolicyExporterLPD(torch.nn.Module):
     def __init__(self, actor_critic):
         super().__init__()
         self.actor = copy.deepcopy(actor_critic.actor)

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
-from legged_gym.algo.ppo_lapd.estimator import PrivilegedEncoder, Adaptation
+from legged_gym.algo.ppo_lpd.estimator import PrivilegedEncoder, Adaptation
 from legged_gym.algo.utils import unpad_trajectories
 
 

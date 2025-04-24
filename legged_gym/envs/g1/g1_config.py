@@ -33,7 +33,7 @@ class g1Cfg(LeggedRobotCfg):
 
         # mesh_type = 'trimesh'
         # curriculum = True
-        # measure_heights = True
+        # measure_heights = False
 
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
         terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
@@ -178,7 +178,7 @@ class g1Cfg(LeggedRobotCfg):
 
 class g1CfgPPO(LeggedRobotCfgPPO):
     # OnPolicyRunner  RNNOnPolicyRunner  RMAOnPolicyRunner DWAQOnPolicyRunner LAPDOnPolicyRunner
-    runner_class_name = 'LAPDOnPolicyRunner'
+    runner_class_name = 'LPDOnPolicyRunner'
 
     class runner(LeggedRobotCfgPPO.runner):
         max_iterations = 10000  # number of policy updates
