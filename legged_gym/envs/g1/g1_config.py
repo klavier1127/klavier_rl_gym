@@ -148,7 +148,7 @@ class g1Cfg(LeggedRobotCfg):
         class scales:
             # feet pos
             hip_pos = -2.0
-            ankle_pos = -0.0
+            ankle_pos = -1.0
             feet_contact = 0.5
             feet_air_time = -0.0
             feet_height = -10.
@@ -159,7 +159,7 @@ class g1Cfg(LeggedRobotCfg):
             tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
             ang_vel_xy = -0.05
-            lin_vel_z = -1.0
+            lin_vel_z = -1.0    # -1.0
 
             # base pos
             default_dof_pos = -0.03
@@ -181,6 +181,5 @@ class g1CfgPPO(LeggedRobotCfgPPO):
     runner_class_name = 'LAPDOnPolicyRunner'
 
     class runner(LeggedRobotCfgPPO.runner):
-        num_steps_per_env = 25  # per iteration
         max_iterations = 10000  # number of policy updates
         experiment_name = 'g1'

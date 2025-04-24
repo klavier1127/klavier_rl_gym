@@ -177,6 +177,5 @@ class x2CfgPPO(LeggedRobotCfgPPO):
     runner_class_name = 'RMAOnPolicyRunner'
 
     class runner(LeggedRobotCfgPPO.runner):
-        num_steps_per_env = 25  # per iteration
         max_iterations = 10000  # number of policy updates
         experiment_name = 'x2'

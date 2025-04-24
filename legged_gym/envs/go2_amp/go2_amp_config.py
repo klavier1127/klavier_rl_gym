@@ -168,7 +168,6 @@ class go2AMPCfgPPO(LeggedRobotCfgPPO):
     runner_class_name = 'AMPOnPolicyRunner'
 
     class runner(LeggedRobotCfgPPO.runner):
-        num_steps_per_env = 25  # per iteration
         max_iterations = 30000  # number of policy updates
         experiment_name = 'go2_amp'
 
