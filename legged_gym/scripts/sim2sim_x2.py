@@ -46,7 +46,7 @@ def run_mujoco(policy, cfg):
         cmd = np.array([[vx, vy, dyaw]], dtype=np.float32)
         # Obtain an observation
         q, dq, omega, proj_grav = get_obs(data)
-        cycle_time = 0.6
+        cycle_time = 0.7
         dt_phase = cfg.sim_config.dt / cycle_time
         phase = phase + dt_phase
 
@@ -102,6 +102,6 @@ if __name__ == '__main__':
             kds = np.array([  4,   4,   4,   4,  4,       4,   4,   4,   4,  4], dtype=np.double)
             tau_limit = np.array([30, 45, 60, 60, 30,    30,  45,  60,  60,  30], dtype=np.double)
 
-    model_path = "../logs/x2/exported/policies/policy_rma.pt"
+    model_path = "../logs/x2/exported/policies/policy_lpd.pt"
     policy = torch.jit.load(model_path)
     run_mujoco(policy, Sim2simCfg())

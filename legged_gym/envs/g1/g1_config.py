@@ -36,7 +36,7 @@ class g1Cfg(LeggedRobotCfg):
         # measure_heights = False
 
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
-        terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
+        terrain_proportions = [0.1, 0.1, 0.3, 0.3, 0.2, 0.0, 0.0]
 
     class noise:
         add_noise = True
@@ -148,9 +148,9 @@ class g1Cfg(LeggedRobotCfg):
         class scales:
             # feet pos
             hip_pos = -2.0
-            ankle_pos = -1.0
+            ankle_pos = -0.0
             feet_contact = 0.5
-            feet_air_time = -0.0
+            feet_air_time = -1.0
             feet_height = -10.
             contact_no_vel = -0.2
             contact_forces = -0.0

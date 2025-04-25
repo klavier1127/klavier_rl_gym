@@ -8,7 +8,7 @@ class x2Cfg(LeggedRobotCfg):
         o_h_frame_stack = 25
 
         num_single_obs = 41
-        num_privileged_obs = 55
+        num_privileged_obs = 7 + 48
         num_single_critic_obs = num_single_obs + num_privileged_obs
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
@@ -21,7 +21,7 @@ class x2Cfg(LeggedRobotCfg):
         name = "x2"
         foot_name = "ankle_pitch"
         knee_name = "knee"
-        terminate_after_contacts_on = ["pelvis", "hip", "knee"]
+        terminate_after_contacts_on = ['pelvis']
         penalize_contacts_on = ["knee", "hip"]
         replace_cylinder_with_capsule = True
         flip_visual_attachments = False
@@ -135,8 +135,8 @@ class x2Cfg(LeggedRobotCfg):
         base_height_target = 0.86
         base_feet_height = 0.09
         target_feet_height = 0.08 # m
-        cycle_time = 0.6 # sec
-        target_air_time = 0.3
+        cycle_time = 0.7    # sec
+        target_air_time = 0.35
         # tracking reward = exp(error*sigma)
         tracking_sigma = 0.25
         max_contact_force = 400     # Forces above this value are penalized
@@ -173,7 +173,7 @@ class x2Cfg(LeggedRobotCfg):
             alive = 0.3
 
 class x2CfgPPO(LeggedRobotCfgPPO):
-    # OnPolicyRunner  RNNOnPolicyRunner  RMAOnPolicyRunner
+    # OnPolicyRunner  RNNOnPolicyRunner  RMAOnPolicyRunner LPDOnPolicyRunner
     runner_class_name = 'RMAOnPolicyRunner'
 
     class runner(LeggedRobotCfgPPO.runner):

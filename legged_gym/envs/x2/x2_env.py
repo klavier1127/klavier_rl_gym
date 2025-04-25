@@ -1,6 +1,6 @@
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
-from legged_gym.envs import LeggedRobot
 import torch
+from legged_gym.envs import LeggedRobot
 from legged_gym.utils import min_max_normalize
 
 
@@ -45,7 +45,7 @@ class x2Env(LeggedRobot):
             (self.root_states[:, 2].unsqueeze(1) - self.feet_pos[:, :, 2] - self.cfg.rewards.base_height_target) * 10.,
             self.contacts,
 
-            # 55
+            # 48
             min_max_normalize(self.body_mass, self.cfg.domain_rand.added_mass_range),
             min_max_normalize(self.base_com, self.cfg.domain_rand.added_com_range),
             min_max_normalize(self.env_frictions, self.cfg.domain_rand.friction_range),
@@ -90,11 +90,7 @@ class x2Env(LeggedRobot):
         self.obs_history_buf = torch.cat([self.obs_history[i] for i in range(self.cfg.env.o_h_frame_stack)], dim=1)
 
     def get_privileged_observations(self):
-        noise_vec = torch.zeros(self.cfg.env.num_privileged_obs, device=self.device)
-        noise_vec[0: 3] = 0.0# 0.1   # lin_vel
-        noise_vec[3: 5] = 0.0#0.02  # feet_heights
-        noise_vec[5: 7] = 0.0#0.2   # contact
-        self.privileged_obs_buf = self.privileged_obs.clone() + (2 * torch.rand_like(self.privileged_obs) -1) * noise_vec * self.cfg.noise.noise_level
+        self.privileged_obs_buf = self.privileged_obs.clone()
         return self.privileged_obs_buf
 
     def get_observations_history(self):
