@@ -7,8 +7,8 @@ class g1Cfg(LeggedRobotCfg):
         c_frame_stack = 1
         o_h_frame_stack = 25
 
-        num_single_obs = 47
-        num_privileged_obs = 7# + 15
+        num_single_obs = 47# + 7 + 15
+        num_privileged_obs = 7 + 15
         num_single_critic_obs = num_single_obs + num_privileged_obs
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
@@ -27,13 +27,13 @@ class g1Cfg(LeggedRobotCfg):
         flip_visual_attachments = False
 
     class terrain(LeggedRobotCfg.terrain):
-        mesh_type = 'plane'
-        curriculum = False
-        measure_heights = False
-
-        # mesh_type = 'trimesh'
-        # curriculum = True
+        # mesh_type = 'plane'
+        # curriculum = False
         # measure_heights = False
+
+        mesh_type = 'trimesh'
+        curriculum = True
+        measure_heights = True
 
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
         terrain_proportions = [0.1, 0.1, 0.3, 0.3, 0.2, 0.0, 0.0]
@@ -140,7 +140,7 @@ class g1Cfg(LeggedRobotCfg):
         base_feet_height = 0.035
         target_feet_height = 0.08 # m
         cycle_time = 0.8 # sec
-        target_air_time = 0.4 # sec
+        target_air_time = 0.5 # sec
         # tracking reward = exp(error*sigma)
         tracking_sigma = 0.25
         max_contact_force = 500     # Forces above this value are penalized
@@ -150,8 +150,8 @@ class g1Cfg(LeggedRobotCfg):
             hip_pos = -2.0
             ankle_pos = -0.0
             feet_contact = 0.5
-            feet_air_time = -1.0
-            feet_height = -10.
+            feet_air_time = -1.
+            feet_height = -0.
             contact_no_vel = -0.2
             contact_forces = -0.0
 
@@ -159,7 +159,7 @@ class g1Cfg(LeggedRobotCfg):
             tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
             ang_vel_xy = -0.05
-            lin_vel_z = -1.0    # -1.0
+            lin_vel_z = -0.0    # -1.0
 
             # base pos
             default_dof_pos = -0.03
@@ -177,7 +177,7 @@ class g1Cfg(LeggedRobotCfg):
             alive = 0.3
 
 class g1CfgPPO(LeggedRobotCfgPPO):
-    # OnPolicyRunner  RNNOnPolicyRunner  RMAOnPolicyRunner DWAQOnPolicyRunner LAPDOnPolicyRunner
+    # OnPolicyRunner  RNNOnPolicyRunner  RMAOnPolicyRunner DWAQOnPolicyRunner LPDOnPolicyRunner
     runner_class_name = 'LPDOnPolicyRunner'
 
     class runner(LeggedRobotCfgPPO.runner):

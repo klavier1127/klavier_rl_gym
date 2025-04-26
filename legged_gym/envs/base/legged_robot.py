@@ -862,7 +862,7 @@ class LeggedRobot(BaseTask):
         self.last_contacts = self.contacts
         first_contact = (self.feet_air_time > 0.) * contact_filt
         self.feet_air_time += self.dt
-        error = torch.sum((self.feet_air_time - self.cfg.rewards.target_air_time) * first_contact, dim=1)
+        error = torch.sum((self.feet_air_time - 0.5) * first_contact, dim=1)
         self.feet_air_time *= ~contact_filt
         return torch.square(error)
 
