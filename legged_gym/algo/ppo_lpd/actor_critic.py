@@ -26,10 +26,8 @@ class ActorCritic(nn.Module):
             print(
                 "ActorCriticRecurrent.__init__ got unexpected arguments, which will be ignored: " + str(kwargs.keys()),
             )
-        latent_num = int(num_privileged_obs / 2)
-        self.priv_encoder = PrivilegedEncoder(num_privileged_obs, latent_num)
-        self.adaptation = Adaptation(num_obs_history, latent_num)
-        self.memory_a = Memory(num_actor_obs+latent_num, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
+        self.adaptation = Adaptation(num_obs_history, num_privileged_obs)
+        self.memory_a = Memory(num_actor_obs+num_privileged_obs, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.memory_c = Memory(num_critic_obs, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.actor = Actor(rnn_hidden_size, num_actions, actor_hidden_dims)
         self.critic = Critic(rnn_hidden_size, critic_hidden_dims)
@@ -72,8 +70,7 @@ class ActorCritic(nn.Module):
         self.distribution = Normal(mean, mean * 0. + self.std)
 
     def act(self, observations, privileged_obs, masks=None, hidden_states=None):
-        latent = self.priv_encoder(privileged_obs)
-        input_memory = torch.cat((observations, latent), dim=-1)
+        input_memory = torch.cat((observations, privileged_obs), dim=-1)
         input_a = self.memory_a(input_memory, masks, hidden_states)
         self.update_distribution(input_a.squeeze(0))
         return self.distribution.sample()

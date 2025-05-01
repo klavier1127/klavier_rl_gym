@@ -162,9 +162,8 @@ class PPO:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
             # Estimator loss
-            latent = self.actor_critic.priv_encoder(privileged_obs_batch)
             est_latent = self.actor_critic.adaptation.get_mu(obs_history_batch)
-            estimator_loss = nn.MSELoss()(est_latent, latent.detach())
+            estimator_loss = nn.MSELoss()(est_latent, privileged_obs_batch.detach())
 
             # Alignment loss
             actions_expert = mu_batch.clone()

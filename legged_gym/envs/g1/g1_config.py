@@ -8,7 +8,7 @@ class g1Cfg(LeggedRobotCfg):
         o_h_frame_stack = 25
 
         num_single_obs = 47# + 7 + 15
-        num_privileged_obs = 7 + 12 # priv + heights
+        num_privileged_obs = 5# + 12 # priv + heights
         num_single_critic_obs = num_single_obs + num_privileged_obs
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
@@ -33,7 +33,7 @@ class g1Cfg(LeggedRobotCfg):
 
         mesh_type = 'trimesh'
         curriculum = True
-        measure_heights = True
+        measure_heights = False
 
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
         terrain_proportions = [0.1, 0.0, 0.6, 0.3, 0.0, 0.0, 0.0]

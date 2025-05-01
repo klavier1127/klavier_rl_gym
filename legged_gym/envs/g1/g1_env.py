@@ -41,7 +41,6 @@ class g1Env(LeggedRobot):
         self.privileged_obs = torch.cat((
             self.base_lin_vel * self.obs_scales.lin_vel,
             (self.root_states[:, 2].unsqueeze(1) - self.feet_pos[:, :, 2] - self.cfg.rewards.base_height_target) * 10.,
-            self.contacts,
         ), dim=-1)
         heights = self.root_states[:, 2].unsqueeze(1) - self.cfg.rewards.base_height_target - self.measured_heights
         if self.cfg.terrain.measure_heights:
