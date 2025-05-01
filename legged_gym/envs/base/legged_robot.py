@@ -85,6 +85,9 @@ class LeggedRobot(BaseTask):
         self.projected_gravity[:] = quat_rotate_inverse(self.base_quat, self.gravity_vec)
         self.base_euler_xyz = get_euler_xyz_tensor(self.base_quat)
 
+        self.feet_quat = self.rigid_state[:, self.feet_indices, 3:7]
+        for i in range(len(self.feet_indices)):
+            self.feet_rpy[:, i] = get_euler_xyz_tensor(self.feet_quat[:, i])
         self._post_physics_step_callback()
 
         # compute observations, rewards, resets, ...
@@ -165,6 +168,9 @@ class LeggedRobot(BaseTask):
         self.base_quat[env_ids] = self.root_states[env_ids, 3:7]
         self.base_euler_xyz[env_ids] = get_euler_xyz_tensor(self.base_quat[env_ids])
         self.projected_gravity[env_ids] = quat_rotate_inverse(self.base_quat[env_ids], self.gravity_vec[env_ids])
+        self.feet_quat = self.rigid_state[:, self.feet_indices, 3:7]
+        for i in range(len(self.feet_indices)):
+            self.feet_rpy[:, i] = get_euler_xyz_tensor(self.feet_quat[:, i])
 
         for i in range(self.obs_history.maxlen):
             self.obs_history[i][env_ids] *= 0.
@@ -437,11 +443,8 @@ class LeggedRobot(BaseTask):
         """ Random pushes the robots. Emulates an impulse by setting a randomized base velocity.
         """
         max_vel = self.cfg.domain_rand.max_push_vel_xy
-        max_push_angular = self.cfg.domain_rand.max_push_ang_vel
         self.rand_push_force[:, :2] = torch_rand_float(-max_vel, max_vel, (self.num_envs, 2), device=self.device)  # lin vel x/y
         self.root_states[:, 7:9] = self.rand_push_force[:, :2]
-        self.rand_push_torque = torch_rand_float(-max_push_angular, max_push_angular, (self.num_envs, 3), device=self.device)
-        self.root_states[:, 10:13] = self.rand_push_torque
         self.gym.set_actor_root_state_tensor(self.sim, gymtorch.unwrap_tensor(self.root_states))
 
     def _update_terrain_curriculum(self, env_ids):
@@ -495,14 +498,16 @@ class LeggedRobot(BaseTask):
         # create some wrapper tensors for different slices
         self.root_states = gymtorch.wrap_tensor(actor_root_state)
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
+        self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(self.num_envs, -1, 3) # shape: num_envs, num_bodies, xyz axis
+        self.rigid_state = gymtorch.wrap_tensor(rigid_body_state).view(self.num_envs, -1, 13)
         self.dof_pos = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 0]
         self.dof_vel = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 1]
         self.base_quat = self.root_states[:, 3:7]
         self.base_euler_xyz = get_euler_xyz_tensor(self.base_quat)
-
-        self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(self.num_envs, -1, 3) # shape: num_envs, num_bodies, xyz axis
-        self.rigid_state = gymtorch.wrap_tensor(rigid_body_state).view(self.num_envs, -1, 13)
-
+        self.feet_quat = self.rigid_state[:, self.feet_indices, 3:7]
+        self.feet_rpy = torch.zeros((self.num_envs, len(self.feet_indices), 3),  dtype=torch.float, device=self.device, requires_grad=False)
+        for i in range(len(self.feet_indices)):
+            self.feet_rpy[:, i] = get_euler_xyz_tensor(self.feet_quat[:, i])
         # initialize some data used later on
         self.common_step_counter = 0
         self.extras = {}
@@ -865,6 +870,12 @@ class LeggedRobot(BaseTask):
         error = torch.sum((self.feet_air_time - 0.5) * first_contact, dim=1)
         self.feet_air_time *= ~contact_filt
         return torch.square(error)
+
+    def _reward_feet_orientation(self):
+        error = 0
+        for i in range(self.feet_num):
+            error += torch.sum(torch.square(self.feet_rpy[:, i, :2]), dim=1)
+        return error
 
     ################################# balance ##################################################
     def _reward_default_dof_pos(self):

@@ -8,7 +8,7 @@ class g1Cfg(LeggedRobotCfg):
         o_h_frame_stack = 25
 
         num_single_obs = 47# + 7 + 15
-        num_privileged_obs = 7 + 15
+        num_privileged_obs = 7 + 12 # priv + heights
         num_single_critic_obs = num_single_obs + num_privileged_obs
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
@@ -36,7 +36,7 @@ class g1Cfg(LeggedRobotCfg):
         measure_heights = True
 
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
-        terrain_proportions = [0.1, 0.1, 0.3, 0.3, 0.2, 0.0, 0.0]
+        terrain_proportions = [0.1, 0.0, 0.6, 0.3, 0.0, 0.0, 0.0]
 
     class noise:
         add_noise = True
@@ -94,9 +94,7 @@ class g1Cfg(LeggedRobotCfg):
     class domain_rand:
         push_robots = True
         push_interval_s = 9
-        max_push_vel_xy = 1.0
-        max_push_ang_vel = 0.5
-        dynamic_randomization = 0.02
+        max_push_vel_xy = 0.5
 
         randomize_commands = True
         randomize_friction = True
@@ -127,7 +125,7 @@ class g1Cfg(LeggedRobotCfg):
 
     class commands(LeggedRobotCfg.commands):
         class ranges:
-            lin_vel_x = [-1.0, 1.0]  # min max [m/s]
+            lin_vel_x = [-0.5, 1.0]  # min max [m/s]
             lin_vel_y = [-0.5, 0.5]   # min max [m/s]
             ang_vel_yaw = [-1, 1]    # min max [rad/s]
             heading = [-1.57, 1.57]
@@ -140,7 +138,6 @@ class g1Cfg(LeggedRobotCfg):
         base_feet_height = 0.035
         target_feet_height = 0.08 # m
         cycle_time = 0.8 # sec
-        target_air_time = 0.5 # sec
         # tracking reward = exp(error*sigma)
         tracking_sigma = 0.25
         max_contact_force = 500     # Forces above this value are penalized
@@ -149,6 +146,7 @@ class g1Cfg(LeggedRobotCfg):
             # feet pos
             hip_pos = -2.0
             ankle_pos = -0.0
+            feet_orientation = -0.
             feet_contact = 0.5
             feet_air_time = -1.
             feet_height = -0.
