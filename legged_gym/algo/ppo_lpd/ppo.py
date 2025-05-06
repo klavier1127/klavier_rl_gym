@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from absl.testing.parameterized import parameters
+
 from .actor_critic import ActorCritic
 from .rollout_storage import RolloutStorage
 
@@ -36,6 +38,7 @@ class PPO:
         self.actor_critic.to(self.device)
         self.storage = None  # initialized later
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
+        self.regulator_optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
         self.transition = RolloutStorage.Transition()
 
         # PPO parameters
@@ -161,23 +164,30 @@ class PPO:
             else:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
-            # Estimator loss
-            latent = self.actor_critic.priv_encoder(privileged_obs_batch)
-            est_latent = self.actor_critic.estimator(obs_history_batch)
-            estimator_loss = nn.MSELoss()(est_latent, latent.detach())
-
-            # Alignment loss
-            actions_expert = mu_batch.clone()
-            actions_stu = self.actor_critic.act_student(obs_batch, obs_history_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
-            alignment_loss = nn.MSELoss()(actions_stu, actions_expert.detach())
-
-            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + estimator_loss + alignment_loss
+            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
 
             # Gradient step
             self.optimizer.zero_grad()
             loss.backward()
             nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
             self.optimizer.step()
+
+            # Estimator loss
+            latent = self.actor_critic.priv_encoder(privileged_obs_batch)
+            est_latent = self.actor_critic.estimator(obs_history_batch)
+            estimator_loss = nn.MSELoss()(est_latent, latent.detach())
+            # Alignment loss
+            actions_expert = mu_batch.clone()
+            actions_stu = self.actor_critic.act_student(obs_batch, obs_history_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
+            alignment_loss = nn.MSELoss()(actions_stu, actions_expert.detach())
+
+            loss = estimator_loss + alignment_loss
+
+            # Gradient step
+            self.regulator_optimizer.zero_grad()
+            loss.backward()
+            nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
+            self.regulator_optimizer.step()
 
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
