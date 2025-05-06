@@ -33,6 +33,7 @@ class ActorCritic(nn.Module):
         self.memory_c = Memory(num_critic_obs, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.actor = Actor(rnn_hidden_size, num_actions, actor_hidden_dims)
         self.critic = Critic(rnn_hidden_size, critic_hidden_dims)
+        self.regulator = Actor(rnn_hidden_size, num_actions, actor_hidden_dims)
 
         print(f"Actor RNN: {self.memory_a}")
         print(f"Critic RNN: {self.memory_c}")
@@ -84,13 +85,14 @@ class ActorCritic(nn.Module):
             input_memory = torch.cat((observations, latent), dim=-1)
             input_a = self.memory_a(input_memory, masks, hidden_states)
             actions_mu = self.actor(input_a.squeeze(0))
-        return actions_mu
+        delta = self.regulator(input_a.squeeze(0))
+        return actions_mu + delta
 
     def act_inference(self, observations, obs_history):
         latent = self.estimator(obs_history)
         input_memory = torch.cat((observations, latent), dim=-1)
         input_a = self.memory_a(input_memory)
-        return self.actor(input_a.squeeze(0))
+        return self.actor(input_a.squeeze(0)) + self.regulator(input_a.squeeze(0))
 
     def evaluate(self, critic_observations, masks=None, hidden_states=None):
         input_c = self.memory_c(critic_observations, masks, hidden_states)
