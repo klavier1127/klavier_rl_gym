@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
-from legged_gym.algo.ppo_lpd.estimator import PrivilegedEncoder, Adaptation, MLPHistoryEncoder
+from legged_gym.algo.ppo_lpd.estimator import PrivilegedEncoder, Regulator, MLPHistoryEncoder
 from legged_gym.algo.utils import unpad_trajectories
 
 
@@ -28,7 +28,7 @@ class ActorCritic(nn.Module):
             )
         latent_num = int(num_privileged_obs / 2)
         self.priv_encoder = PrivilegedEncoder(num_privileged_obs, latent_num)
-        self.adaptation = MLPHistoryEncoder(num_obs_history, latent_num)
+        self.estimator = MLPHistoryEncoder(num_obs_history, latent_num)
         self.memory_a = Memory(num_actor_obs+latent_num, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.memory_c = Memory(num_critic_obs, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.actor = Actor(rnn_hidden_size, num_actions, actor_hidden_dims)
@@ -79,15 +79,15 @@ class ActorCritic(nn.Module):
         return self.distribution.sample()
 
     def act_student(self, observations, obs_history, masks=None, hidden_states=None):
-        latent = self.adaptation(obs_history)
+        latent = self.estimator(obs_history)
         with torch.no_grad():
             input_memory = torch.cat((observations, latent), dim=-1)
-        input_a = self.memory_a(input_memory, masks, hidden_states)
-        actions_mu = self.actor(input_a.squeeze(0))
+            input_a = self.memory_a(input_memory, masks, hidden_states)
+            actions_mu = self.actor(input_a.squeeze(0))
         return actions_mu
 
     def act_inference(self, observations, obs_history):
-        latent = self.adaptation(obs_history)
+        latent = self.estimator(obs_history)
         input_memory = torch.cat((observations, latent), dim=-1)
         input_a = self.memory_a(input_memory)
         return self.actor(input_a.squeeze(0))

@@ -33,9 +33,7 @@ class MLPHistoryEncoder(nn.Module):
             nn.ELU(),
             nn.Linear(512, 256),
             nn.ELU(),
-            nn.Linear(256, 128),
-            nn.ELU(),
-            nn.Linear(128, latent_num),
+            nn.Linear(256, latent_num),
         )
 
     def forward(self, obs_history):
@@ -215,42 +213,15 @@ class VAE(nn.Module):
 
 
 
-class Adaptation(nn.Module):
-    def __init__(self, num_obs_history, latent_num):
-        super(Adaptation, self).__init__()
-        self.num_obs_history = num_obs_history
+class Regulator(nn.Module):
+    def __init__(self, input_num):
+        super(Regulator, self).__init__()
 
-        # Build Encoder
-        self.history_encoder = nn.Sequential(
-            nn.Linear(num_obs_history, 512),
-            nn.ELU(),
-            nn.Linear(512, 256),
-            nn.ELU(),
-            nn.Linear(256, 128),
-            nn.ELU(),
-            nn.Linear(128, latent_num),
+        self.regulator = nn.Sequential(
+            nn.Linear(input_num, input_num),
+            nn.LayerNorm(input_num)
         )
 
-        self.adaptation = nn.Sequential(
-            nn.Linear(latent_num, 128),
-            nn.ELU(),
-            nn.Linear(128, 64),
-            nn.ELU(),
-            nn.Linear(64, latent_num),
-        )
+    def forward(self, input_num):
+        return self.regulator(input_num)
 
-        self.norm = nn.LayerNorm(latent_num)
-
-    def forward(self, obs_history):
-        pass
-
-    def get_mu(self, obs_history):
-        latent = self.history_encoder(obs_history)
-        return latent
-
-    def get_ada(self, obs_history):
-        with torch.no_grad():
-            latent = self.history_encoder(obs_history)
-        delta = self.adaptation(latent)
-        latent_ada = self.norm(latent + delta)
-        return latent_ada

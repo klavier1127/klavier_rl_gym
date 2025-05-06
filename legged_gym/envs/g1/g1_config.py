@@ -151,13 +151,13 @@ class g1Cfg(LeggedRobotCfg):
             feet_air_time = -0.
             feet_height = -10.
             contact_no_vel = -0.2
-            contact_forces = -0.0
+            contact_forces = -0.003
 
             # vel tracking
             tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
             ang_vel_xy = -0.05
-            lin_vel_z = -1.0    # -1.0
+            lin_vel_z = -1.0
 
             # base pos
             default_dof_pos = -0.03

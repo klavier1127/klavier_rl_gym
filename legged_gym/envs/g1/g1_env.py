@@ -36,23 +36,22 @@ class g1Env(LeggedRobot):
         self.extras['obs_history'] = self.get_observations_history()
 
     def compute_observations(self):
-        phase_sin = torch.sin(2 * torch.pi * self.phase)
-        phase_cos = torch.cos(2 * torch.pi * self.phase)
         self.privileged_obs = torch.cat((
             self.base_lin_vel * self.obs_scales.lin_vel,
-            (self.root_states[:, 2].unsqueeze(1) - self.feet_pos[:, :, 2] - self.cfg.rewards.base_height_target) * 10.,
+            (self.feet_pos[:, :, 2] - self.root_states[:, 2].unsqueeze(1) + self.cfg.rewards.base_height_target) * 5.0,
             self.contacts,
         ), dim=-1)
-        heights = self.root_states[:, 2].unsqueeze(1) - self.cfg.rewards.base_height_target - self.measured_heights
+
         if self.cfg.terrain.measure_heights:
+            heights = self.root_states[:, 2].unsqueeze(1) - self.cfg.rewards.base_height_target - self.measured_heights
             self.privileged_obs = torch.cat((
             self.privileged_obs,
-            heights,    # 15
+            torch.clip(heights, -1, 1) * 5.0,    # 15
         ), dim=-1)
 
         self.obs = torch.cat((
-            phase_sin,
-            phase_cos,
+            torch.sin(2 * torch.pi * self.phase),
+            torch.cos(2 * torch.pi * self.phase),
             self.commands[:, :3] * self.commands_scale,
             (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
             self.dof_vel * self.obs_scales.dof_vel,
@@ -101,7 +100,7 @@ class g1Env(LeggedRobot):
 
     def _reward_feet_contact(self):
         walk_mask = self._get_walk_mask()
-        reward = 1. * (self.contacts == walk_mask)
+        reward = 1.0 * (self.contacts == walk_mask)
         return torch.mean(reward, dim=1)
 
     # def _reward_feet_height(self):
