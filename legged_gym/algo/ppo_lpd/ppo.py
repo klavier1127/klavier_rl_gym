@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from absl.testing.parameterized import parameters
-
 from .actor_critic import ActorCritic
 from .rollout_storage import RolloutStorage
 

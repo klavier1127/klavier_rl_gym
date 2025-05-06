@@ -18,7 +18,7 @@ def play(args):
     env_cfg.terrain.curriculum = False
     env_cfg.terrain.max_init_terrain_level = 5
     env_cfg.noise.add_noise = False
-    env_cfg.domain_rand.push_robots = False
+    env_cfg.domain_rand.push_robots = True
     env_cfg.domain_rand.joint_angle_noise = 0.
     env_cfg.noise.curriculum = False
     env_cfg.noise.noise_level = 0.5
@@ -66,6 +66,6 @@ def play(args):
 if __name__ == '__main__':
     EXPORT_POLICY = True
     RENDER = True
-    FIX_COMMAND = True
+    FIX_COMMAND = False
     args = get_args()
     play(args)

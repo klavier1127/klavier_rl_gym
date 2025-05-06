@@ -94,7 +94,7 @@ class g1Cfg(LeggedRobotCfg):
     class domain_rand:
         push_robots = True
         push_interval_s = 9
-        max_push_vel_xy = 1.0
+        max_push_vel_xy = 0.5
 
         randomize_commands = True
         randomize_friction = True
