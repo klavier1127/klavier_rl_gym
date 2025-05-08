@@ -37,25 +37,10 @@ class x2Env(LeggedRobot):
         self.extras['obs_history'] = self.get_observations_history()
 
     def compute_observations(self):
-        phase_sin = torch.sin(2 * torch.pi * self.phase)
-        phase_cos = torch.cos(2 * torch.pi * self.phase)
-
         self.privileged_obs = torch.cat((
             self.base_lin_vel * self.obs_scales.lin_vel,
             (self.root_states[:, 2].unsqueeze(1) - self.feet_pos[:, :, 2] - self.cfg.rewards.base_height_target) * 10.,
             self.contacts,
-
-            # 48
-            min_max_normalize(self.body_mass, self.cfg.domain_rand.added_mass_range),
-            min_max_normalize(self.base_com, self.cfg.domain_rand.added_com_range),
-            min_max_normalize(self.env_frictions, self.cfg.domain_rand.friction_range),
-            min_max_normalize(self.kp_factor, self.cfg.domain_rand.Kp_factor_range),
-            min_max_normalize(self.kd_factor, self.cfg.domain_rand.Kd_factor_range),
-            min_max_normalize(self.motor_offset, self.cfg.domain_rand.motor_offset_range),
-            min_max_normalize(self.motor_strength, self.cfg.domain_rand.motor_strength_range),
-            min_max_normalize(self.joint_friction_coeffs, self.cfg.domain_rand.joint_friction_range),
-            min_max_normalize(self.joint_damping_coeffs, self.cfg.domain_rand.joint_damping_range),
-            min_max_normalize(self.joint_armatures, self.cfg.domain_rand.joint_armature_range),
         ), dim=-1)
         if self.cfg.terrain.measure_heights:
             self.privileged_obs = torch.cat((
@@ -64,8 +49,8 @@ class x2Env(LeggedRobot):
         ), dim=-1)
 
         self.obs = torch.cat((
-            phase_sin,
-            phase_cos,
+            torch.sin(2 * torch.pi * self.phase),
+            torch.cos(2 * torch.pi * self.phase),
             self.commands[:, :3] * self.commands_scale,
             (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
             self.dof_vel * self.obs_scales.dof_vel,

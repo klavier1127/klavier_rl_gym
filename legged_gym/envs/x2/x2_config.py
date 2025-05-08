@@ -3,12 +3,12 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 
 class x2Cfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
-        frame_stack = 15
-        c_frame_stack = 3
+        frame_stack = 1
+        c_frame_stack = 1
         o_h_frame_stack = 25
 
         num_single_obs = 41
-        num_privileged_obs = 7 + 48
+        num_privileged_obs = 7
         num_single_critic_obs = num_single_obs + num_privileged_obs
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
@@ -91,31 +91,28 @@ class x2Cfg(LeggedRobotCfg):
         push_robots = True
         push_interval_s = 9
         max_push_vel_xy = 1.0
-        max_push_ang_vel = 0.5
-        dynamic_randomization = 0.02
-
         randomize_commands = True
         randomize_friction = True
         friction_range = [0.5, 1.5]
         randomize_base_mass = True
         added_mass_range = [-5., 5.]
-        randomize_all_mass = True
+        randomize_all_mass = False
         rd_mass_range = [0.5, 1.5]
-        randomize_all_com = True
+        randomize_all_com = False
         rd_com_range = [-0.03, 0.03]
         randomize_base_com = True
         added_com_range = [-0.06, 0.06]
-        randomize_Kp_factor = True
+        randomize_Kp_factor = False
         Kp_factor_range = [0.8, 1.2]
-        randomize_Kd_factor = True
+        randomize_Kd_factor = False
         Kd_factor_range = [0.8, 1.2]
-        randomize_motor_strength = True
+        randomize_motor_strength = False
         motor_strength_range = [0.8, 1.2]
-        randomize_motor_offset = True
+        randomize_motor_offset = False
         motor_offset_range = [-0.035, 0.035]
-        randomize_joint_friction = True
+        randomize_joint_friction = False
         joint_friction_range = [0.01, 0.1]
-        randomize_joint_damping = True
+        randomize_joint_damping = False
         joint_damping_range = [0.1, 0.3]
         randomize_joint_armature = True
         joint_armature_range = [0.01, 0.03]
@@ -123,10 +120,9 @@ class x2Cfg(LeggedRobotCfg):
 
     class commands(LeggedRobotCfg.commands):
         class ranges:
-            lin_vel_x = [-1.0, 2.0]  # min max [m/s]
-            lin_vel_y = [-0.5, 0.5]   # min max [m/s]
-            ang_vel_yaw = [-1, 1]    # min max [rad/s]
-            heading = [-1.57, 1.57]
+            lin_vel_x = [-0.5, 1.0]  # [m/s]
+            lin_vel_y = [-0.5, 0.5]  # [m/s]
+            heading   = [-1.0, 1.0]  # [rad/s]
 
     class rewards:
         # if true negative total rewards are clipped at zero (avoids early termination problems)
@@ -136,8 +132,6 @@ class x2Cfg(LeggedRobotCfg):
         base_feet_height = 0.09
         target_feet_height = 0.08 # m
         cycle_time = 0.7    # sec
-        target_air_time = 0.35
-        # tracking reward = exp(error*sigma)
         tracking_sigma = 0.25
         max_contact_force = 400     # Forces above this value are penalized
 
@@ -145,6 +139,7 @@ class x2Cfg(LeggedRobotCfg):
             # feet pos
             hip_pos = -2.0
             ankle_pos = -1.0
+            feet_orientation = -0.0
             feet_contact = 0.5
             feet_air_time = -0.0
             feet_height = -10.
@@ -159,8 +154,8 @@ class x2Cfg(LeggedRobotCfg):
 
             # base pos
             default_dof_pos = -0.03
-            orientation = -1.
-            base_height = -1.
+            orientation = -1.0
+            base_height = -1.0
 
             # energy
             action_rate = -0.01
@@ -174,7 +169,7 @@ class x2Cfg(LeggedRobotCfg):
 
 class x2CfgPPO(LeggedRobotCfgPPO):
     # OnPolicyRunner  RNNOnPolicyRunner  RMAOnPolicyRunner LPDOnPolicyRunner
-    runner_class_name = 'RMAOnPolicyRunner'
+    runner_class_name = 'LPDOnPolicyRunner'
 
     class runner(LeggedRobotCfgPPO.runner):
         max_iterations = 10000  # number of policy updates

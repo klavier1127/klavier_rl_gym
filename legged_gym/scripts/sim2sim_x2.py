@@ -100,7 +100,7 @@ if __name__ == '__main__':
         class robot_config:
             kps = np.array([200, 200, 200, 200, 30,     200, 200, 200, 200, 30], dtype=np.double)
             kds = np.array([  4,   4,   4,   4,  4,       4,   4,   4,   4,  4], dtype=np.double)
-            tau_limit = np.array([30, 45, 60, 60, 30,    30,  45,  60,  60,  30], dtype=np.double)
+            tau_limit = np.array([60, 90, 60, 60, 30,    60, 90, 60, 60, 30], dtype=np.double)
 
     model_path = "../logs/x2/exported/policies/policy_lpd.pt"
     policy = torch.jit.load(model_path)

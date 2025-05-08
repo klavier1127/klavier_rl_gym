@@ -26,7 +26,7 @@ class ActorCritic(nn.Module):
             print(
                 "ActorCriticRecurrent.__init__ got unexpected arguments, which will be ignored: " + str(kwargs.keys()),
             )
-        latent_num = int(num_privileged_obs / 2)
+        latent_num = int(num_privileged_obs / 2) + 1
         self.priv_encoder = PrivilegedEncoder(num_privileged_obs, latent_num)
         self.estimator = MLPHistoryEncoder(num_obs_history, latent_num)
         self.memory_a = Memory(num_actor_obs+latent_num, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
