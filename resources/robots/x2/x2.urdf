@@ -79,12 +79,12 @@
         <color rgba="1 1 1 1" />
       </material>
     </visual>
-    <!-- <collision>
+    <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
         <mesh filename="meshes/L_hip_roll_link.STL" />
       </geometry>
-    </collision> -->
+    </collision>
   </link>
   <joint name="L_hip_roll" type="revolute">
     <origin xyz="-0.0095 0.1 0" rpy="0 0 0" />
@@ -255,12 +255,12 @@
         <color rgba="1 1 1 1" />
       </material>
     </visual>
-    <!-- <collision>
+    <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
         <mesh filename="meshes/R_hip_roll_link.STL" />
       </geometry>
-    </collision> -->
+    </collision>
   </link>
   <joint name="R_hip_roll" type="revolute">
     <origin xyz="-0.0095 -0.1 0" rpy="0 0 0" />

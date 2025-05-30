@@ -100,7 +100,7 @@ class g1Env(LeggedRobot):
 
     def _reward_feet_contact(self):
         walk_mask = self._get_walk_mask()
-        reward = 1.0 * (self.contacts == walk_mask)
+        reward = (self.contacts == walk_mask).float()
         return torch.mean(reward, dim=1)
 
     # def _reward_feet_height(self):

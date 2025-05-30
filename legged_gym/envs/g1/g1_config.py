@@ -33,7 +33,7 @@ class g1Cfg(LeggedRobotCfg):
 
         # mesh_type = 'trimesh'
         # curriculum = True
-        # measure_heights = True
+        # measure_heights = False
 
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
         terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
@@ -94,7 +94,7 @@ class g1Cfg(LeggedRobotCfg):
     class domain_rand:
         push_robots = True
         push_interval_s = 9
-        max_push_vel_xy = 0.5
+        max_push_vel_xy = 1.0
 
         randomize_commands = True
         randomize_friction = True
@@ -138,7 +138,7 @@ class g1Cfg(LeggedRobotCfg):
         target_feet_height = 0.08 # m
         cycle_time = 0.8 # sec
         # tracking reward = exp(error*sigma)
-        tracking_sigma = 0.25
+        tracking_sigma = 0.5
         max_contact_force = 500     # Forces above this value are penalized
 
         class scales:
@@ -146,20 +146,21 @@ class g1Cfg(LeggedRobotCfg):
             hip_pos = -2.0
             ankle_pos = -1.0
             feet_orientation = -0.0
-            feet_contact = 0.3
-            feet_air_time = -0.
-            feet_height = -10.
-            contact_no_vel = -0.2
-            contact_forces = -0.003
+            feet_contact = 0.5
+            feet_air_time = -0.0
+            feet_height = -10.0
+            feet_stumble = -0.0
+            contact_no_vel = -0.3
+            contact_forces = -0.002
 
             # vel tracking
-            tracking_lin_vel = 1.0
-            tracking_ang_vel = 0.5
-            ang_vel_xy = -0.05
-            lin_vel_z = -1.0
+            tracking_lin_vel = 2.0
+            tracking_ang_vel = 1.0
+            ang_vel_xy = -0.1
+            lin_vel_z = -2.0
 
             # base pos
-            default_dof_pos = -0.03
+            default_dof_pos = -0.02
             orientation = -1.0
             base_height = -1.0
 

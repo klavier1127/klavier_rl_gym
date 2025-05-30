@@ -877,6 +877,10 @@ class LeggedRobot(BaseTask):
             error += torch.sum(torch.square(self.feet_rpy[:, i, :2]), dim=1)
         return error
 
+    def _reward_feet_stumble(self):
+        # Penalize feet hitting vertical surfaces
+        return torch.any(torch.norm(self.contact_forces[:, self.feet_indices, :2], dim=2) > 4 *torch.abs(self.contact_forces[:, self.feet_indices, 2]), dim=1)
+
     ################################# balance ##################################################
     def _reward_default_dof_pos(self):
         return torch.norm(self.dof_pos - self.default_dof_pos, dim=-1)
