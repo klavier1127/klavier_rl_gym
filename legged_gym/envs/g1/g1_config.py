@@ -93,8 +93,8 @@ class g1Cfg(LeggedRobotCfg):
 
     class domain_rand:
         push_robots = True
-        push_interval_s = 9
-        max_push_vel_xy = 1.0
+        push_interval_s = 5
+        max_push_vel_xy = 1.5
 
         randomize_commands = True
         randomize_friction = True
@@ -138,7 +138,7 @@ class g1Cfg(LeggedRobotCfg):
         target_feet_height = 0.08 # m
         cycle_time = 0.8 # sec
         # tracking reward = exp(error*sigma)
-        tracking_sigma = 0.5
+        tracking_sigma = 0.25
         max_contact_force = 500     # Forces above this value are penalized
 
         class scales:
@@ -175,7 +175,7 @@ class g1Cfg(LeggedRobotCfg):
 
 class g1CfgPPO(LeggedRobotCfgPPO):
     # OnPolicyRunner  RNNOnPolicyRunner  RMAOnPolicyRunner DWAQOnPolicyRunner LPDOnPolicyRunner
-    runner_class_name = 'LPDOnPolicyRunner'
+    runner_class_name = 'RNNOnPolicyRunner'
 
     class runner(LeggedRobotCfgPPO.runner):
         max_iterations = 10000  # number of policy updates

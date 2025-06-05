@@ -36,7 +36,6 @@ class PPO:
         self.actor_critic.to(self.device)
         self.storage = None  # initialized later
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
-        self.student_optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
         self.transition = RolloutStorage.Transition()
 
         # PPO parameters
@@ -78,9 +77,11 @@ class PPO:
         self.transition.obs_history = obs_history
         return self.transition.actions
 
-    def process_env_step(self, rewards, dones, infos):
+    def process_env_step(self, rewards, dones, next_obs, next_critic_obs, infos):
         self.transition.rewards = rewards.clone()
         self.transition.dones = dones
+        self.transition.next_obs = next_obs
+        self.transition.next_critic_obs = next_critic_obs
         # Bootstrapping on time outs
         if "time_outs" in infos:
             self.transition.rewards += self.gamma * torch.squeeze(
@@ -99,8 +100,7 @@ class PPO:
     def update(self):
         mean_value_loss = 0
         mean_surrogate_loss = 0
-        mean_estimator_loss = 0
-        mean_alignment_loss = 0
+        mean_predict_loss = 0
 
         if self.actor_critic.is_recurrent:
             generator = self.storage.reccurent_mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
@@ -111,6 +111,8 @@ class PPO:
             critic_obs_batch,
             privileged_obs_batch,
             obs_history_batch,
+            next_obs_batch,
+            next_critic_obs_batch,
             actions_batch,
             target_values_batch,
             advantages_batch,
@@ -162,40 +164,27 @@ class PPO:
             else:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
-            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
+            # Predict loss
+            _, predict_obs = self.actor_critic.memory_a(obs_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
+            _, predict_critic_obs = self.actor_critic.memory_c(critic_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1])
+            predict_loss = nn.MSELoss()(predict_obs, next_obs_batch) + nn.MSELoss()(predict_critic_obs, next_critic_obs_batch)
+
+            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + predict_loss
+
             # Gradient step
             self.optimizer.zero_grad()
             loss.backward()
             nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
             self.optimizer.step()
 
-
-            # Estimator loss
-            latent = self.actor_critic.priv_encoder(privileged_obs_batch)
-            est_latent = self.actor_critic.estimator(obs_history_batch)
-            estimator_loss = nn.MSELoss()(est_latent, latent.detach())
-            # Alignment loss
-            actions_expert = mu_batch.clone()
-            actions_stu = self.actor_critic.act_student(obs_batch, obs_history_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
-            alignment_loss = nn.MSELoss()(actions_stu, actions_expert.detach())
-
-            loss = estimator_loss + alignment_loss
-            # Gradient step
-            self.student_optimizer.zero_grad()
-            loss.backward()
-            nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
-            self.student_optimizer.step()
-
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
-            mean_estimator_loss += estimator_loss.item()
-            mean_alignment_loss += alignment_loss.item()
+            mean_predict_loss += predict_loss.item()
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
-        mean_estimator_loss /= num_updates
-        mean_alignment_loss /= num_updates
+        mean_predict_loss /= num_updates
         self.storage.clear()
 
-        return mean_value_loss, mean_surrogate_loss, mean_estimator_loss, mean_alignment_loss
+        return mean_value_loss, mean_surrogate_loss, mean_predict_loss

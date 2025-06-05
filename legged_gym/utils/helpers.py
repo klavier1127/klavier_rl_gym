@@ -212,7 +212,7 @@ def export_policy_as_jit(actor_critic, path):
     elif hasattr(actor_critic, 'vae'):
         exporter = PolicyExporterDWAQ(actor_critic)
         exporter.export(path)
-    elif hasattr(actor_critic, 'regulator'):
+    elif hasattr(actor_critic, 'priv_encoder'):
         exporter = PolicyExporterLPD(actor_critic)
         exporter.export(path)
     elif hasattr(actor_critic, 'memory_a'):
@@ -337,11 +337,10 @@ class PolicyExporterDWAQ(torch.nn.Module):
 class PolicyExporterLPD(torch.nn.Module):
     def __init__(self, actor_critic):
         super().__init__()
-        self.actor = copy.deepcopy(actor_critic.actor)
+        self.actor_student = copy.deepcopy(actor_critic.actor_student)
         self.is_recurrent = actor_critic.is_recurrent
         self.memory = copy.deepcopy(actor_critic.memory_a.rnn)
         self.estimator = copy.deepcopy(actor_critic.estimator)
-        self.regulator = copy.deepcopy(actor_critic.regulator)
         self.memory.cpu()
         self.register_buffer(f'hidden_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
         self.register_buffer(f'cell_state', torch.zeros(self.memory.num_layers, 1, self.memory.hidden_size))
@@ -352,7 +351,7 @@ class PolicyExporterLPD(torch.nn.Module):
         out, (h, c) = self.memory(input_m.unsqueeze(0), (self.hidden_state, self.cell_state))
         self.hidden_state[:] = h
         self.cell_state[:] = c
-        return self.actor(out) + self.regulator(out)
+        return self.actor_student(out)
 
     @torch.jit.export
     def reset_memory(self):
@@ -365,5 +364,7 @@ class PolicyExporterLPD(torch.nn.Module):
         self.to('cpu')
         traced_script_module = torch.jit.script(self)
         traced_script_module.save(path)
+
+
 
 
