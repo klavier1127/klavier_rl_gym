@@ -143,24 +143,23 @@ class g1Cfg(LeggedRobotCfg):
 
         class scales:
             # feet pos
-            hip_pos = -2.0
-            ankle_pos = -1.0
+            hip_pos = -1.0
+            ankle_pos = -0.5
             feet_orientation = -0.0
-            feet_contact = 0.5
+            feet_contact = 0.3
             feet_air_time = -0.0
             feet_height = -10.0
             feet_stumble = -0.0
-            contact_no_vel = -0.3
-            contact_forces = -0.002
+            contact_no_vel = -0.2
 
             # vel tracking
-            tracking_lin_vel = 2.0
-            tracking_ang_vel = 1.0
-            ang_vel_xy = -0.1
-            lin_vel_z = -2.0
+            tracking_lin_vel = 1.0
+            tracking_ang_vel = 0.5
+            ang_vel_xy = -0.05
+            lin_vel_z = -1.0
 
             # base pos
-            default_dof_pos = -0.02
+            default_dof_pos = -0.01
             orientation = -1.0
             base_height = -1.0
 

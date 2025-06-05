@@ -22,7 +22,7 @@ class g1Env(LeggedRobot):
     def _get_walk_mask(self):
         self.feet_phase[:, 0] = self.phase[:, 0]
         self.feet_phase[:, 1] = torch.fmod(self.phase[:, 0] + 0.5, 1.0)
-        walk_mask = self.feet_phase < 0.55
+        walk_mask = self.feet_phase <= 0.55
         return walk_mask
 
     def step(self, actions):
