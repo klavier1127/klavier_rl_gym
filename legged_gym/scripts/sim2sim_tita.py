@@ -4,9 +4,9 @@ import mujoco, mujoco_viewer
 from tqdm import tqdm
 from collections import deque
 from legged_gym import LEGGED_GYM_ROOT_DIR
-from legged_gym.envs import g1Cfg
+from legged_gym.envs.tita.tita_config import titaCfg
+from legged_gym.utils import quat_to_euler, quat_to_grav, euler_to_grav
 import torch
-from legged_gym.utils import quat_to_grav
 
 
 def get_obs(data):
@@ -19,16 +19,21 @@ def get_obs(data):
     return q, dq, omega, proj_grav
 
 def pd_control(default_dof_pos, target_q, q, kp, target_dq, dq, kd):
-    return (target_q - q + default_dof_pos) * kp + (target_dq - dq) * kd
+    q_error = default_dof_pos- q
+    q_error[[3, 7]] = 0.
+    dq[[3, 7]] = 1.
+    torques = (target_q + q_error) * kp + (target_dq - dq) * kd
+    return torques
 
 def run_mujoco(policy, cfg):
     model = mujoco.MjModel.from_xml_path(cfg.sim_config.mujoco_model_path)
     model.opt.timestep = cfg.sim_config.dt
     data = mujoco.MjData(model)
-    default_pos = [-0.1, 0, 0, 0.3, -0.2, 0, -0.1, 0, 0, 0.3, -0.2, 0]
-    data.qpos[7:] = default_pos
+    default_pos = [0.0, 0.8, -1.5, 0.0,   0.0, 0.8, -1.5, 0.0]
+    data.qpos[-8:] = default_pos
     mujoco.mj_step(model, data)
     viewer = mujoco_viewer.MujocoViewer(model, data)
+
     target_q = np.zeros((cfg.env.num_actions), dtype=np.double)
     action = np.zeros((cfg.env.num_actions), dtype=np.double)
 
@@ -43,30 +48,39 @@ def run_mujoco(policy, cfg):
     count_lowlevel = 0
 
     for _ in tqdm(range(int(cfg.sim_config.sim_duration / cfg.sim_config.dt)), desc="Simulating..."):
-        force = [0, 0, 0]
-        vx, vy, dyaw = 0.8, 0.0, 0.0
-        cmd = np.array([[vx, vy, dyaw]], dtype=np.float32)
         # Obtain an observation
         q, dq, omega, proj_grav = get_obs(data)
-        cycle_time = 0.8
+        q[[3, 7]] = 0.
+        # 1000hz -> 100hz
+        force = [0, 0, 0]
+        cmd = np.array([[1.5, 0.0, 0.0]], dtype=np.float32)
+
+        cycle_time = 0.5
         dt_phase = cfg.sim_config.dt / cycle_time
         phase = phase + dt_phase
+
         if count_lowlevel % cfg.sim_config.decimation == 0:
+            phase_sin = np.sin(2 * math.pi * phase)
+            phase_cos = np.cos(2 * math.pi * phase)
+            # phase_sin = np.where(stand_mask, 0, phase_sin)
+            # phase_cos = np.where(stand_mask, 0, phase_cos)
+
             obs = np.zeros([1, cfg.env.num_single_obs], dtype=np.float32)
-            obs[0, 0] = np.sin(2 * math.pi * phase)
-            obs[0, 1] = np.cos(2 * math.pi * phase)
+            obs[0, 0] = phase_sin
+            obs[0, 1] = phase_cos
             obs[0, 2:5] = cmd[0] * 2
-            obs[0, 5:17] = (q - default_pos)
-            obs[0, 17:29] = dq * 0.05 # dq * 0.05
-            obs[0, 29:41] = action
-            obs[0, 41:44] = omega*0.25
-            obs[0, 44:47] = proj_grav
+            obs[0, 5:13] = q - default_pos
+            obs[0, 13:21] = dq * 0.05
+            obs[0, 21:29] = action
+            obs[0, 29:32] = omega * 0.25
+            obs[0, 32:35] = proj_grav
 
             obs = np.clip(obs, -cfg.normalization.clip_observations, cfg.normalization.clip_observations)
             hist_obs.append(obs)
             hist_obs.popleft()
             obs_history.append(obs)
             obs_history.popleft()
+
             policy_input = np.zeros([1, cfg.env.num_observations], dtype=np.float32)
             for i in range(cfg.env.frame_stack):
                 policy_input[0, i * cfg.env.num_single_obs: (i + 1) * cfg.env.num_single_obs] = hist_obs[i][0, :]
@@ -80,8 +94,10 @@ def run_mujoco(policy, cfg):
         target_dq = np.zeros((cfg.env.num_actions), dtype=np.double)
         # Generate PD control
         tau = pd_control(default_pos, target_q, q, cfg.robot_config.kps, target_dq, dq, cfg.robot_config.kds)
-        data.ctrl = np.clip(tau, -cfg.robot_config.tau_limit, cfg.robot_config.tau_limit)
-        robot_body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, name="pelvis")
+        tau = np.clip(tau, -cfg.robot_config.tau_limit, cfg.robot_config.tau_limit)
+
+        data.ctrl = tau
+        robot_body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, name="base")
 
         data.xfrc_applied[robot_body_id, :3] += force
         mujoco.mj_step(model, data)
@@ -89,17 +105,30 @@ def run_mujoco(policy, cfg):
         count_lowlevel += 1
     viewer.close()
 
+
 if __name__ == '__main__':
-    class Sim2simCfg(g1Cfg):
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Deployment script.')
+    # parser.add_argument('--load_model', type=str, required=True,
+    #                     help='Run to load from.')
+    parser.add_argument('--terrain', action='store_true', help='terrain or plane')
+    args = parser.parse_args()
+
+
+    class Sim2simCfg(titaCfg):
         class sim_config:
-            mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/g1/scene.xml'
-            sim_duration = 100.0
+            mujoco_model_path = f'{LEGGED_GYM_ROOT_DIR}/resources/robots/tita/xml/tita.xml'
+            sim_duration = 60.0
             dt = 0.001
             decimation = 20
         class robot_config:
-            kps = np.array([100, 100, 100, 150, 40, 40, 100, 100, 100, 150, 40, 40], dtype=np.double)
-            kds = np.array([2, 2, 2, 4, 2, 2, 2, 2, 2, 4, 2, 2], dtype=np.double)
-            tau_limit = 100. * np.ones(12, dtype=np.double)
-    model_path = "../logs/g1/exported/policies/policy_lstm.pt"
+            kps = np.array([40, 40, 40, 20, 40, 40, 40, 20], dtype=np.double)
+            kds = np.array([2, 2, 2, 1,  2, 2, 2, 1], dtype=np.double)
+            # tau_limit = np.array([23.7, 23.7, 35.55, 23.7, 23.7, 35.55, 23.7, 23.7, 35.55, 23.7, 23.7, 35.55], dtype=np.double)
+            tau_limit = 100. * np.ones(8, dtype=np.double)
+
+
+    model_path = "../logs/tita/exported/policies/policy_lstm.pt"
     policy = torch.jit.load(model_path)
     run_mujoco(policy, Sim2simCfg())

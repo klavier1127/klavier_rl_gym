@@ -279,15 +279,15 @@ class LeggedRobot(BaseTask):
                 self.dof_pos_limits[i, 0] = m - 0.5 * r * self.cfg.safety.soft_dof_pos_limit
                 self.dof_pos_limits[i, 1] = m + 0.5 * r * self.cfg.safety.soft_dof_pos_limit
 
-        # randomization of the motor frictions in issac gym
+        # randomization of the motor frictions in isaac gym
         if self.cfg.domain_rand.randomize_joint_friction:
             self.joint_friction_coeffs[env_id, 0] = torch_rand_float(self.cfg.domain_rand.joint_friction_range[0], self.cfg.domain_rand.joint_friction_range[1],(1, 1), device=self.device)
 
-        # randomization of the motor dampings in issac gym
+        # randomization of the motor dampings in isaac gym
         if self.cfg.domain_rand.randomize_joint_damping:
             self.joint_damping_coeffs[env_id, 0] = torch_rand_float(self.cfg.domain_rand.joint_damping_range[0],self.cfg.domain_rand.joint_damping_range[1],(1, 1), device=self.device)
 
-        # randomization of the motor armature in issac gym
+        # randomization of the motor armature in isaac gym
         if self.cfg.domain_rand.randomize_joint_armature:
             self.joint_armatures[env_id, 0] = torch_rand_float(self.cfg.domain_rand.joint_armature_range[0],self.cfg.domain_rand.joint_armature_range[1],(1, 1), device=self.device)
 

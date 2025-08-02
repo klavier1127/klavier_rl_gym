@@ -8,7 +8,7 @@ class g1Cfg(LeggedRobotCfg):
         o_h_frame_stack = 25
 
         num_single_obs = 47# + 7 + 15
-        num_privileged_obs = 7# + 12 # priv + heights
+        num_privileged_obs = 7 + 12 # priv + heights
         num_single_critic_obs = num_single_obs + num_privileged_obs
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
@@ -27,13 +27,13 @@ class g1Cfg(LeggedRobotCfg):
         flip_visual_attachments = False
 
     class terrain(LeggedRobotCfg.terrain):
-        mesh_type = 'plane'
-        curriculum = False
-        measure_heights = False
-
-        # mesh_type = 'trimesh'
-        # curriculum = True
+        # mesh_type = 'plane'
+        # curriculum = False
         # measure_heights = False
+
+        mesh_type = 'trimesh'
+        curriculum = True
+        measure_heights = True
 
         # plane; obstacles; uniform; slope_up; slope_down, stair_up, stair_down
         terrain_proportions = [0.2, 0.2, 0.2, 0.2, 0.2, 0.0, 0.0]
@@ -92,14 +92,14 @@ class g1Cfg(LeggedRobotCfg):
         dt = 0.005  # 1000 Hz
 
     class domain_rand:
-        push_robots = True
+        push_robots = False
         push_interval_s = 5
-        max_push_vel_xy = 1.5
+        max_push_vel_xy = 1.0
 
-        randomize_commands = True
-        randomize_friction = True
+        randomize_commands = False
+        randomize_friction = False
         friction_range = [0.5, 1.5]
-        randomize_base_mass = True
+        randomize_base_mass = False
         added_mass_range = [-5., 5.]
         randomize_all_mass = False
         rd_mass_range = [0.5, 1.5]
@@ -125,8 +125,8 @@ class g1Cfg(LeggedRobotCfg):
 
     class commands(LeggedRobotCfg.commands):
         class ranges:
-            lin_vel_x = [-1.0, 2.0]  # [m/s]
-            lin_vel_y = [-1.0, 1.0]  # [m/s]
+            lin_vel_x = [-0.5, 1.0]  # [m/s]
+            lin_vel_y = [-0.5, 0.5]  # [m/s]
             heading   = [-1.0, 1.0]  # [rad/s]
 
     class rewards:
@@ -147,16 +147,16 @@ class g1Cfg(LeggedRobotCfg):
             ankle_pos = -0.5
             feet_orientation = -0.0
             feet_contact = 0.3
-            feet_air_time = -0.0
-            feet_height = -10.0
-            feet_stumble = -0.0
+            feet_air_time = -1.0
+            feet_height = -0.0
+            feet_stumble = -1.0
             contact_no_vel = -0.2
 
             # vel tracking
             tracking_lin_vel = 1.0
             tracking_ang_vel = 0.5
             ang_vel_xy = -0.05
-            lin_vel_z = -1.0
+            lin_vel_z = -0.25
 
             # base pos
             default_dof_pos = -0.01

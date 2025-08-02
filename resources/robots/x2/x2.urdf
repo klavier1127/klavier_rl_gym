@@ -62,7 +62,7 @@
     <parent link="pelvis_link" />
     <child link="L_hip_yaw_link" />
     <axis xyz="0 0 1" />
-    <limit lower="-0.7854" upper="0.7854" effort="60" velocity="10" />
+    <limit lower="-0.7854" upper="0.7854" effort="100" velocity="10" />
   </joint>
   <link name="L_hip_roll_link">
     <inertial>
@@ -91,7 +91,7 @@
     <parent link="L_hip_yaw_link" />
     <child link="L_hip_roll_link" />
     <axis xyz="1 0 0" />
-    <limit lower="-0.349" upper="0.524" effort="60" velocity="15" />
+    <limit lower="-0.349" upper="0.524" effort="100" velocity="15" />
   </joint>
   <link name="L_hip_pitch_link">
     <inertial>
@@ -120,7 +120,7 @@
     <parent link="L_hip_roll_link" />
     <child link="L_hip_pitch_link" />
     <axis xyz="0 -1 0" />
-    <limit lower="-0.526" upper="2.4434" effort="60" velocity="20" />
+    <limit lower="-0.526" upper="2.4434" effort="100" velocity="20" />
   </joint>
   <link name="L_knee_pitch_link">
     <inertial>
@@ -149,7 +149,7 @@
     <parent link="L_hip_pitch_link" />
     <child link="L_knee_pitch_link" />
     <axis xyz="0 -1 0" />
-    <limit lower="-2.3561" upper="0" effort="60" velocity="20" />
+    <limit lower="-2.3561" upper="0" effort="150" velocity="20" />
   </joint>
   <link name="L_ankle_pitch_link">
     <inertial>
@@ -209,7 +209,7 @@
     <parent link="L_knee_pitch_link" />
     <child link="L_ankle_pitch_link" />
     <axis xyz="0 -1 0" />
-    <limit lower="-1.2217" upper="1.2217" effort="30" velocity="10" />
+    <limit lower="-1.2217" upper="1.2217" effort="40" velocity="10" />
   </joint>
   <link name="R_hip_yaw_link">
     <inertial>
@@ -238,7 +238,7 @@
     <parent link="pelvis_link" />
     <child link="R_hip_yaw_link" />
     <axis xyz="0 0 -1" />
-    <limit lower="-0.7854" upper="0.7854" effort="60" velocity="10" />
+    <limit lower="-0.7854" upper="0.7854" effort="100" velocity="10" />
   </joint>
   <link name="R_hip_roll_link">
     <inertial>
@@ -267,7 +267,7 @@
     <parent link="R_hip_yaw_link" />
     <child link="R_hip_roll_link" />
     <axis xyz="-1 0 0" />
-    <limit lower="-0.349" upper="0.524" effort="60" velocity="15" />
+    <limit lower="-0.349" upper="0.524" effort="100" velocity="15" />
   </joint>
   <link name="R_hip_pitch_link">
     <inertial>
@@ -296,7 +296,7 @@
     <parent link="R_hip_roll_link" />
     <child link="R_hip_pitch_link" />
     <axis xyz="0 -1 0" />
-    <limit lower="-0.526" upper="2.4434" effort="60" velocity="20" />
+    <limit lower="-0.526" upper="2.4434" effort="100" velocity="20" />
   </joint>
   <link name="R_knee_pitch_link">
     <inertial>
@@ -325,7 +325,7 @@
     <parent link="R_hip_pitch_link" />
     <child link="R_knee_pitch_link" />
     <axis xyz="0 -1 0" />
-    <limit lower="-2.3561" upper="0" effort="60" velocity="20" />
+    <limit lower="-2.3561" upper="0" effort="150" velocity="20" />
   </joint>
   <link name="R_ankle_pitch_link">
     <inertial>
@@ -385,7 +385,7 @@
     <parent link="R_knee_pitch_link" />
     <child link="R_ankle_pitch_link" />
     <axis xyz="0 -1 0" />
-    <limit lower="-1.2217" upper="1.2217" effort="30" velocity="10" />
+    <limit lower="-1.2217" upper="1.2217" effort="40" velocity="10" />
   </joint>
   <link name="waist_yaw_link">
     <inertial>

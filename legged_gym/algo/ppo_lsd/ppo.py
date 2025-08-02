@@ -167,7 +167,7 @@ class PPO:
             # Predict loss
             _, predict_obs = self.actor_critic.memory_a(obs_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
             _, predict_critic_obs = self.actor_critic.memory_c(critic_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1])
-            predict_loss = nn.MSELoss()(predict_obs, next_obs_batch) + nn.MSELoss()(predict_critic_obs, next_critic_obs_batch)
+            predict_loss = nn.MSELoss()(predict_obs, critic_obs_batch)# + nn.MSELoss()(predict_critic_obs, next_critic_obs_batch)
 
             loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + predict_loss
 

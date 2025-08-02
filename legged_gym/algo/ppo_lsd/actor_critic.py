@@ -12,10 +12,10 @@ class ActorCritic(nn.Module):
                         num_privileged_obs,
                         num_obs_history,
                         num_actions,
-                        actor_hidden_dims=[256, 128],
-                        critic_hidden_dims=[256, 128],
+                        actor_hidden_dims=[32],
+                        critic_hidden_dims=[32],
                         rnn_type="lstm",
-                        rnn_hidden_size=128,
+                        rnn_hidden_size=64,
                         rnn_num_layers=1,
                         init_noise_std=1.0,
                         *args,
@@ -26,7 +26,7 @@ class ActorCritic(nn.Module):
             print(
                 "ActorCriticRecurrent.__init__ got unexpected arguments, which will be ignored: " + str(kwargs.keys()),
             )
-        self.memory_a = Memory(num_actor_obs, num_actor_obs, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
+        self.memory_a = Memory(num_actor_obs, num_critic_obs, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.memory_c = Memory(num_critic_obs, num_critic_obs, type=rnn_type, num_layers=rnn_num_layers, hidden_size=rnn_hidden_size)
         self.actor = Actor(rnn_hidden_size, num_actions, actor_hidden_dims)
         self.critic = Critic(rnn_hidden_size, critic_hidden_dims)

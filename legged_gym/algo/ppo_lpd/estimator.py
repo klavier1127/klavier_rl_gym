@@ -54,7 +54,7 @@ class LSTMHistoryEncoder(nn.Module):
             batch_first=True,
         )
 
-        self.fc =  nn.Sequential(
+        self.fc = nn.Sequential(
             nn.Linear(hidden_size, 32),
             nn.ELU(),
             nn.Linear(32, latent_num)

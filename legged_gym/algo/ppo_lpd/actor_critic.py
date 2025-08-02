@@ -1,3 +1,6 @@
+import csv
+
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
@@ -12,10 +15,10 @@ class ActorCritic(nn.Module):
                         num_privileged_obs,
                         num_obs_history,
                         num_actions,
-                        actor_hidden_dims=[256, 128],
-                        critic_hidden_dims=[256, 128],
+                        actor_hidden_dims=[32],
+                        critic_hidden_dims=[32],
                         rnn_type="lstm",
-                        rnn_hidden_size=128,
+                        rnn_hidden_size=64,
                         rnn_num_layers=1,
                         init_noise_std=1.0,
                         *args,
@@ -34,6 +37,18 @@ class ActorCritic(nn.Module):
         self.actor = Actor(rnn_hidden_size, num_actions, actor_hidden_dims)
         self.actor_student = Actor(rnn_hidden_size, num_actions, actor_hidden_dims)
         self.critic = Critic(rnn_hidden_size, critic_hidden_dims)
+
+        self.input_a_log = []  # 用来存放每一步的 input_a
+        self.ref_input_a_log = []  # 用来存放每一步的 ref_input_a
+        self.csv_file = open('input_a_log.csv', 'w', newline='')
+        self.csv_writer = csv.writer(self.csv_file)
+        # 构造表头：est_0, est_1, …, est_{D-1}, ref_0, …, ref_{D-1}
+        D = rnn_hidden_size  # 假设 memory_a 的输出维度等于 input_a 维度
+        header = [f'est_{i}' for i in range(D)] + [f'ref_{i}' for i in range(D)]
+        self.csv_writer.writerow(header)
+        # 确保实时写入
+        self.csv_file.flush()
+
 
         print(f"Actor RNN: {self.memory_a}")
         print(f"Critic RNN: {self.memory_c}")
@@ -87,11 +102,25 @@ class ActorCritic(nn.Module):
         actions_mu_stu = self.actor_student(input_a.squeeze(0))
         return actions_mu_stu
 
-    def act_inference(self, observations, obs_history):
+    def act_inference(self, observations, privileged_obs, obs_history):
         latent = self.estimator(obs_history)
         input_memory = torch.cat((observations, latent), dim=-1)
         input_a = self.memory_a(input_memory)
-        return self.actor_student(input_a.squeeze(0))
+        est_values = input_a.detach().cpu().numpy().tolist()
+        with torch.no_grad():
+            ref_latent = self.priv_encoder(privileged_obs)
+            ref_input_memory = torch.cat((observations, ref_latent), dim=-1)
+            ref_input_a = self.memory_a(ref_input_memory)
+            ref_values = ref_input_a.detach().cpu().numpy().tolist()
+        est_arr = self.actor_student(input_a.squeeze(0)).detach().cpu().numpy().tolist()
+        ref_arr = self.actor(ref_input_a.squeeze(0)).detach().cpu().numpy().tolist()
+        # est_arr = np.array(est_values)  # shape (64,)
+        # ref_arr = np.array(ref_values)  # shape (64,)
+        est = float(np.linalg.norm(est_arr))
+        ref = float(np.linalg.norm(ref_arr))
+        self.csv_writer.writerow([est, ref])
+        self.csv_file.flush()
+        return self.actor(ref_input_a.squeeze(0))
 
     def evaluate(self, critic_observations, masks=None, hidden_states=None):
         input_c = self.memory_c(critic_observations, masks, hidden_states)
