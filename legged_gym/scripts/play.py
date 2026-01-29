@@ -50,11 +50,11 @@ def play(args):
     joint_index = 1  # which joint is used for logging
     stop_state_log = 1000  # number of steps before plotting states
     for i in tqdm(range(stop_state_log)):
-        # actions = policy(obs.detach(), privileged_obs.detach(), obs_history.detach())  # * 0.
-        actions = policy(obs.detach(), obs_history.detach())  # * 0.
+        actions = policy(obs.detach(), privileged_obs.detach(), obs_history.detach())  # * 0.
+        # actions = policy(obs.detach(), obs_history.detach())  # * 0.
 
         if FIX_COMMAND:
-            env.commands[:, 0] = 1.5  # 1.0
+            env.commands[:, 0] = 0.5  # 1.0
             env.commands[:, 1] = 0.0
             env.commands[:, 2] = 0.
             env.commands[:, 3] = 0.

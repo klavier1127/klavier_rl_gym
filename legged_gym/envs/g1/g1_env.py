@@ -1,11 +1,17 @@
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg
 import torch
 from legged_gym.envs import LeggedRobot
+import csv
 
 
 class g1Env(LeggedRobot):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
+
+        # ================== 日志相关（最简版） ==================
+        self.log_step = 0
+        self.log_file = open("euler.csv", "w", newline="")
+        self.log_writer = csv.writer(self.log_file)
 
     def _get_noise_scale_vec(self):
         noise_vec = torch.zeros(self.cfg.env.num_single_obs, device=self.device)
@@ -34,6 +40,13 @@ class g1Env(LeggedRobot):
         super().post_physics_step()
         self.extras['privileged_obs'] = self.get_privileged_observations()
         self.extras['obs_history'] = self.get_observations_history()
+        # ========= 边跑边写 CSV =========
+        env_id = 0
+        # self.log_writer.writerow([
+        #     # float(self.torques[env_id, 3]),  # 左膝
+        #     # float(self.torques[env_id, 9]),  # 右膝
+        #     # float(torch.norm(self.base_euler_xyz[env_id, :2])),
+        # ])
 
     def compute_observations(self):
         privileged_obs = torch.cat((

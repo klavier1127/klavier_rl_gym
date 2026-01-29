@@ -175,7 +175,7 @@ class g1Cfg(LeggedRobotCfg):
 
 class g1CfgPPO(LeggedRobotCfgPPO):
     # OnPolicyRunner  RNNOnPolicyRunner  RMAOnPolicyRunner DWAQOnPolicyRunner LPDOnPolicyRunner
-    runner_class_name = 'RNNOnPolicyRunner'
+    runner_class_name = 'LPDOnPolicyRunner'
 
     class runner(LeggedRobotCfgPPO.runner):
         max_iterations = 10000  # number of policy updates

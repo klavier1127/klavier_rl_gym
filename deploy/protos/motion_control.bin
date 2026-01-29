@@ -1,55 +1,0 @@
-
-ƒ
-motion_control.proto	droidgrpc"
-Empty"ü
-DroidConfigs
-
-joint_name (	R	jointName
-pzero (Rpzero
-pmin (Rpmin
-pmax (Rpmax
-imax (Rimax
-kp (Rkp
-kd (Rkd"Å
-DroidStateResponse
-
-system_tic (R	systemTic
-position (Rposition
-velocity (Rvelocity
-torque (Rtorque 
-temperature (Rtemperature
-abs_encoder (R
-absEncoder
-	pack_loss (RpackLoss#
-lowlevel_init (RlowlevelInit
-imu_acc
- (RimuAcc
-	imu_euler (RimuEuler
-imu_gyro (RimuGyro
-	est_euler (RestEuler
-est_com_pos (R	estComPos
-est_com_vel (R	estComVel
-
-foot_force (R	footForce
-	imu_stamp (RimuStamp
-bus_voltage (R
-busVoltage
-bus_current (R
-busCurrent
-
-bus_energy (R	busEnergy
-rc_du (RrcDu
-rc_keys (RrcKeys"È
-DroidCommandRequest
-mode (Rmode
-position (Rposition
-velocity (Rvelocity
-torque (Rtorque
-
-cmd_enable (R	cmdEnable
-ens (Rens
-kp
- (Rkp
-kd (Rkd
-
-max_torque (R	maxTorquebproto3
