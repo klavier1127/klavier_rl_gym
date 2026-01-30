@@ -8,10 +8,10 @@ class g1Env(LeggedRobot):
     def __init__(self, cfg: LeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
         super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
 
-        # ================== 日志相关（最简版） ==================
-        self.log_step = 0
-        self.log_file = open("euler.csv", "w", newline="")
-        self.log_writer = csv.writer(self.log_file)
+        # # ================== 日志相关（最简版） ==================
+        # self.log_step = 0
+        # self.log_file = open("euler.csv", "w", newline="")
+        # self.log_writer = csv.writer(self.log_file)
 
     def _get_noise_scale_vec(self):
         noise_vec = torch.zeros(self.cfg.env.num_single_obs, device=self.device)
@@ -40,26 +40,21 @@ class g1Env(LeggedRobot):
         super().post_physics_step()
         self.extras['privileged_obs'] = self.get_privileged_observations()
         self.extras['obs_history'] = self.get_observations_history()
-        # ========= 边跑边写 CSV =========
-        env_id = 0
-        # self.log_writer.writerow([
-        #     # float(self.torques[env_id, 3]),  # 左膝
-        #     # float(self.torques[env_id, 9]),  # 右膝
-        #     # float(torch.norm(self.base_euler_xyz[env_id, :2])),
-        # ])
+        # # ========= 边跑边写 CSV =========
+        # env_id = 0
+        # # self.log_writer.writerow([
+        # #     # float(self.torques[env_id, 3]),  # 左膝
+        # #     # float(self.torques[env_id, 9]),  # 右膝
+        # #     # float(torch.norm(self.base_euler_xyz[env_id, :2])),
+        # # ])
 
     def compute_observations(self):
+        heights = self.root_states[:, 2].unsqueeze(1) - self.cfg.rewards.base_height_target - self.measured_heights
+
         privileged_obs = torch.cat((
             self.base_lin_vel * self.obs_scales.lin_vel,
             (self.feet_pos[:, :, 2] - self.root_states[:, 2].unsqueeze(1) + self.cfg.rewards.base_height_target) * 5.0,
             self.contacts,
-        ), dim=-1)
-
-        if self.cfg.terrain.measure_heights:
-            heights = self.root_states[:, 2].unsqueeze(1) - self.cfg.rewards.base_height_target - self.measured_heights
-            privileged_obs = torch.cat((
-            privileged_obs,
-            torch.clip(heights, -1, 1) * 5.0,    # 15
         ), dim=-1)
 
         obs = torch.cat((
@@ -72,6 +67,17 @@ class g1Env(LeggedRobot):
             self.base_ang_vel * self.obs_scales.ang_vel,
             self.projected_gravity * self.obs_scales.quat,
         ), dim=-1)
+
+        if self.cfg.terrain.measure_heights:
+            # privileged_obs = torch.cat((
+            #     privileged_obs,
+            #     torch.clip(heights, -1, 1) * 5.0,    # 15
+            # ), dim=-1)
+
+            obs = torch.cat((
+                obs,
+                torch.clip(heights, -1, 1) * 5.0,  # 15
+            ), dim=-1)
 
         critic_obs = torch.cat((
             obs,

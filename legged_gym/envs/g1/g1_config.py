@@ -7,8 +7,8 @@ class g1Cfg(LeggedRobotCfg):
         c_frame_stack = 1
         o_h_frame_stack = 25
 
-        num_single_obs = 47# + 7 + 15
-        num_privileged_obs = 7 + 12 # priv + heights
+        num_single_obs = 47 + 12# + 7 + 15
+        num_privileged_obs = 7# + 12 # priv + heights
         num_single_critic_obs = num_single_obs + num_privileged_obs
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
@@ -175,7 +175,7 @@ class g1Cfg(LeggedRobotCfg):
 
 class g1CfgPPO(LeggedRobotCfgPPO):
     # OnPolicyRunner  RNNOnPolicyRunner  RMAOnPolicyRunner DWAQOnPolicyRunner LPDOnPolicyRunner
-    runner_class_name = 'LPDOnPolicyRunner'
+    runner_class_name = 'RNNOnPolicyRunner'
 
     class runner(LeggedRobotCfgPPO.runner):
         max_iterations = 10000  # number of policy updates
