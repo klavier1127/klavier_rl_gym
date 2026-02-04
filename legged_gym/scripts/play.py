@@ -48,7 +48,7 @@ def play(args):
     logger = Logger(env.dt)
     robot_index = 0  # which robot is used for logging
     joint_index = 1  # which joint is used for logging
-    stop_state_log = 1000  # number of steps before plotting states
+    stop_state_log = 2000  # number of steps before plotting states
     for i in tqdm(range(stop_state_log)):
         # actions = policy(obs.detach(), privileged_obs.detach(), obs_history.detach())  # * 0.
         actions = policy(obs.detach(), obs_history.detach())  # * 0.

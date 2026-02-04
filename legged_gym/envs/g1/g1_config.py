@@ -7,8 +7,8 @@ class g1Cfg(LeggedRobotCfg):
         c_frame_stack = 1
         o_h_frame_stack = 25
 
-        num_single_obs = 47 + 12# + 7 + 15
-        num_privileged_obs = 7# + 12 # priv + heights
+        num_single_obs = 47 + 12# + heights
+        num_privileged_obs = 7 # priv
         num_single_critic_obs = num_single_obs + num_privileged_obs
         num_observations = int(frame_stack * num_single_obs)
         num_critic_observations = int(c_frame_stack * num_single_critic_obs)
@@ -161,7 +161,7 @@ class g1Cfg(LeggedRobotCfg):
             # base pos
             default_dof_pos = -0.01
             orientation = -1.0
-            base_height = -1.0
+            base_height = -0.0
 
             # energy
             action_rate = -0.01
